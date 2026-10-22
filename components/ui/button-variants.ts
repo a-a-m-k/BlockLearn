@@ -1,0 +1,51 @@
+import { cva, type VariantProps } from "class-variance-authority";
+
+const mutedInteract =
+  "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground";
+
+const iconPad = {
+  md: "has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
+  sm: "has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5",
+} as const;
+
+export const buttonVariants = cva(
+  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-chrome font-semibold whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-45 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-(--size-icon)",
+  {
+    variants: {
+      variant: {
+        default:
+          "bg-brand text-brand-foreground shadow-brand hover:bg-brand/90 hover:shadow-card",
+        outline:
+          "border-input bg-card shadow-card hover:bg-surface-raised hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground",
+        softOutline: `border-2 border-border bg-card shadow-card ${mutedInteract}`,
+        ghost: mutedInteract,
+        secondary:
+          "border-border bg-secondary text-secondary-foreground shadow-card hover:bg-muted aria-expanded:bg-muted aria-expanded:text-secondary-foreground",
+        destructive:
+          "bg-destructive/20 text-destructive hover:bg-destructive/30 focus-visible:border-destructive/40 focus-visible:ring-destructive/40",
+        link: "text-primary underline-offset-4 hover:underline",
+        cta: "rounded-lg bg-brand text-brand-foreground shadow-brand hover:bg-brand/90 hover:shadow-card",
+      },
+      size: {
+        default: `h-(--size-control) gap-(--spacing-control-gap) px-(--spacing-control-px) ${iconPad.md}`,
+        xs: `h-(--size-control-sm) gap-1 rounded-md px-2 text-chrome-meta in-data-[slot=button-group]:rounded-lg ${iconPad.sm} [&_svg:not([class*='size-'])]:size-(--size-icon-sm)`,
+        sm: `h-(--size-control-sm) gap-(--spacing-control-gap) rounded-md px-(--spacing-control-px) text-chrome-meta in-data-[slot=button-group]:rounded-lg ${iconPad.sm} [&_svg:not([class*='size-'])]:size-(--size-icon-sm)`,
+        lg: `h-(--size-control-lg) gap-(--spacing-control-gap) px-(--spacing-control-px) ${iconPad.md} [&_svg:not([class*='size-'])]:size-(--size-icon-lg)`,
+        cta: `h-(--size-control-cta) gap-2 px-6 text-body has-data-[icon=inline-end]:pr-5 has-data-[icon=inline-start]:pl-5 [&_svg:not([class*='size-'])]:size-(--size-icon-lg)`,
+        icon: "size-(--size-control) [&_svg:not([class*='size-'])]:size-(--size-icon)",
+        "icon-xs":
+          "size-(--size-control-sm) rounded-md in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-(--size-icon-sm)",
+        "icon-sm":
+          "size-(--size-control-sm) rounded-md in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-(--size-icon-sm)",
+        "icon-lg":
+          "size-(--size-control-lg) [&_svg:not([class*='size-'])]:size-(--size-icon-lg)",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  },
+);
+
+export type ButtonVariantProps = VariantProps<typeof buttonVariants>;

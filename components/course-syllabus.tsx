@@ -1,0 +1,97 @@
+"use client";
+
+import Image from "next/image";
+import Link from "next/link";
+import { ArrowRightIcon, CheckIcon, ClockIcon } from "lucide-react";
+
+import styles from "@/app/landing.module.css";
+import { useProgress } from "@/components/progress-provider";
+import {
+  chapters,
+  getResumeChapterSlug,
+  totalChapters,
+} from "@/lib/course";
+import { chapterPath } from "@/lib/site";
+import { cn } from "@/lib/utils";
+
+export function CourseSyllabus() {
+  const { completedSlugs, completedChapterCount, hydrated, isComplete } =
+    useProgress();
+  const resumeSlug = getResumeChapterSlug(completedSlugs);
+  const courseFinished = hydrated && completedChapterCount >= totalChapters;
+
+  return (
+    <nav aria-label="Course chapters">
+      <div className={styles.pathHeading}>
+        <div>
+          <span className={styles.sectionTag}>YOUR LEARNING PATH</span>
+          <h2>Learn it one block at a time.</h2>
+        </div>
+        <p>
+          <span>01</span>
+          Start here, or jump
+          <br />
+          to any chapter.
+        </p>
+      </div>
+
+      <ol className={styles.chapterGrid}>
+        {chapters.map((chapter) => {
+          const completed = hydrated && isComplete(chapter.slug);
+          const upNext =
+            hydrated && !courseFinished && chapter.slug === resumeSlug;
+          return (
+            <li key={chapter.slug}>
+              <Link
+                href={chapterPath(chapter.slug)}
+                aria-current={upNext ? "step" : undefined}
+                className={cn(
+                  styles.chapterCard,
+                  upNext && styles.current,
+                )}
+              >
+                <div className={styles.chapterTop}>
+                  <span>{String(chapter.number).padStart(2, "0")}</span>
+                  {upNext ? <i>IN PROGRESS</i> : null}
+                </div>
+
+                <div className={styles.chapterArt} aria-hidden>
+                  {chapter.image ? (
+                    <Image
+                      src={chapter.image.src}
+                      alt=""
+                      width={380}
+                      height={380}
+                      sizes="6rem"
+                    />
+                  ) : null}
+                  {completed ? <CheckIcon /> : null}
+                </div>
+
+                <div className={styles.chapterCopy}>
+                  <h3>
+                    {completed ? (
+                      <span className="sr-only">Completed. </span>
+                    ) : null}
+                    {chapter.title}
+                  </h3>
+                  <p>{chapter.description}</p>
+                </div>
+
+                <div className={styles.chapterFooter}>
+                  <span>
+                    <ClockIcon aria-hidden />
+                    {chapter.readMinutes} min
+                  </span>
+                  <i>
+                    <ArrowRightIcon aria-hidden />
+                  </i>
+                </div>
+              </Link>
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}
