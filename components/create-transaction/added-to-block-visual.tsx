@@ -5,7 +5,7 @@ import { motion, useReducedMotion } from "motion/react";
 import { WireCube } from "@/components/hash-chain/visuals";
 import { cn } from "@/lib/utils";
 
-import { appear, ringFade, VISUAL_FRAME } from "./motion";
+import { appear, ringFade, STEP_VISUAL_FRAME } from "./motion";
 
 export function AddedToBlockVisual({ active = false }: { active?: boolean }) {
   const shouldReduceMotion = useReducedMotion();
@@ -13,7 +13,7 @@ export function AddedToBlockVisual({ active = false }: { active?: boolean }) {
   return (
     <div
       className={cn(
-        VISUAL_FRAME,
+        STEP_VISUAL_FRAME,
         "flex-col items-center justify-center gap-2 sm:gap-3",
       )}
     >

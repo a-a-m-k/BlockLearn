@@ -1,14 +1,10 @@
 import { CURRENT_BLOCK, TRANSACTIONS } from "@/components/hash-chain/model";
-import {
-  HASH_CHECK_MAX_AMOUNT,
-  type AmountEntry,
-} from "@/components/ledger/types";
+import type { AmountEntry } from "@/components/ledger/types";
 import { hashHex, serializeBlock } from "@/lib/fingerprint";
 
 export type { AmountEntry as BlockTx };
 
 export const BLOCK_NUMBER = CURRENT_BLOCK.number;
-export const MAX_AMOUNT = HASH_CHECK_MAX_AMOUNT;
 
 export const INITIAL_TXS: AmountEntry[] = TRANSACTIONS.map((tx) => ({ ...tx }));
 

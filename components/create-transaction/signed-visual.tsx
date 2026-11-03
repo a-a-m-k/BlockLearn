@@ -5,7 +5,7 @@ import { motion, useReducedMotion } from "motion/react";
 
 import { cn } from "@/lib/utils";
 
-import { appear, VISUAL_FRAME } from "./motion";
+import { appear, STEP_VISUAL_FRAME } from "./motion";
 import { WaitingDots } from "./waiting-dots";
 
 export function SignedVisual({
@@ -20,7 +20,7 @@ export function SignedVisual({
   return (
     <div
       className={cn(
-        VISUAL_FRAME,
+        STEP_VISUAL_FRAME,
         "grid grid-rows-[1fr_auto] items-center justify-items-center gap-2 sm:gap-3",
       )}
     >

@@ -13,6 +13,100 @@ type CreateTransactionBlockProps = {
   block: CreateTransactionContent;
 };
 
+type StepPlayback = {
+  activeStep: number;
+  lastStep: number;
+  runId: number;
+  onSend: () => void;
+  onNext: () => void;
+  onReplay: () => void;
+};
+
+function statusText(
+  reducedMotion: boolean,
+  activeStep: number,
+  lastStep: number,
+  title: string,
+) {
+  if (reducedMotion) {
+    return "Animation is off, so this shows the finished result.";
+  }
+  if (activeStep === 0) return "Ready to sign and send.";
+  return `Step ${activeStep + 1} of ${lastStep + 1}: ${title}`;
+}
+
+function AllStepsList({
+  block,
+  runId,
+  onSend,
+}: {
+  block: CreateTransactionContent;
+  runId: number;
+  onSend: () => void;
+}) {
+  return (
+    <div role="list" className="flex flex-col gap-3 sm:gap-4">
+      {block.steps.map((item, index) => (
+        <StepPanel
+          key={item.title}
+          step={item}
+          index={index}
+          stepCount={block.steps.length}
+          block={block}
+          reducedMotion
+          runId={runId}
+          active
+          onSend={onSend}
+        />
+      ))}
+    </div>
+  );
+}
+
+function ActiveStepList({
+  block,
+  step,
+  playback,
+}: {
+  block: CreateTransactionContent;
+  step: CreateTransactionContent["steps"][number];
+  playback: StepPlayback;
+}) {
+  const { activeStep, lastStep, runId, onSend, onNext, onReplay } = playback;
+  const isLast = activeStep >= lastStep;
+
+  return (
+    <div role="list">
+      <StepPanel
+        key={`${runId}-${activeStep}`}
+        step={step}
+        index={activeStep}
+        stepCount={block.steps.length}
+        block={block}
+        reducedMotion={false}
+        runId={runId}
+        active={activeStep > 0}
+        onSend={onSend}
+        footer={
+          activeStep === 0 ? null : (
+            <Button
+              type="button"
+              variant="cta"
+              size="sm"
+              className="h-10 w-full"
+              icon={isLast ? RefreshCwIcon : undefined}
+              onClick={isLast ? onReplay : onNext}
+            >
+              {isLast ? "Replay" : "Next step"}
+              {isLast ? null : <ArrowRightIcon data-icon="inline-end" />}
+            </Button>
+          )
+        }
+      />
+    </div>
+  );
+}
+
 export function CreateTransactionBlock({ block }: CreateTransactionBlockProps) {
   const prefersReducedMotion = useReducedMotion();
   const reducedMotion = prefersReducedMotion === true;
@@ -25,7 +119,6 @@ export function CreateTransactionBlock({ block }: CreateTransactionBlockProps) {
   }, [reducedMotion, lastStep]);
 
   const step = block.steps[activeStep] ?? block.steps[0];
-  const isLast = activeStep >= lastStep;
 
   function handleSend() {
     if (reducedMotion || activeStep > 0) return;
@@ -42,11 +135,14 @@ export function CreateTransactionBlock({ block }: CreateTransactionBlockProps) {
     setActiveStep(0);
   }
 
-  const status = reducedMotion
-    ? "Animation is off, so this shows the finished result."
-    : activeStep === 0
-      ? "Ready to sign and send."
-      : `Step ${activeStep + 1} of ${lastStep + 1}: ${step.title}`;
+  const playback: StepPlayback = {
+    activeStep,
+    lastStep,
+    runId,
+    onSend: handleSend,
+    onNext: handleNext,
+    onReplay: handleReplay,
+  };
 
   return (
     <figure
@@ -54,53 +150,12 @@ export function CreateTransactionBlock({ block }: CreateTransactionBlockProps) {
       aria-label={`Create a transaction from ${block.from} to ${block.to}, then watch it get signed, broadcast, wait in the mempool, and land in a block.`}
     >
       <p role="status" aria-live="polite" className="sr-only">
-        {status}
+        {statusText(reducedMotion, activeStep, lastStep, step.title)}
       </p>
       {reducedMotion ? (
-        <div role="list" className="flex flex-col gap-3 sm:gap-4">
-          {block.steps.map((item, index) => (
-            <StepPanel
-              key={item.title}
-              step={item}
-              index={index}
-              stepCount={block.steps.length}
-              block={block}
-              reducedMotion
-              runId={runId}
-              active
-              onSend={handleSend}
-            />
-          ))}
-        </div>
+        <AllStepsList block={block} runId={runId} onSend={handleSend} />
       ) : (
-        <div role="list">
-          <StepPanel
-            key={`${runId}-${activeStep}`}
-            step={step}
-            index={activeStep}
-            stepCount={block.steps.length}
-            block={block}
-            reducedMotion={false}
-            runId={runId}
-            active={activeStep > 0}
-            onSend={handleSend}
-            footer={
-              activeStep === 0 ? null : (
-                <Button
-                  type="button"
-                  variant="cta"
-                  size="sm"
-                  className="h-10 w-full"
-                  icon={isLast ? RefreshCwIcon : undefined}
-                  onClick={isLast ? handleReplay : handleNext}
-                >
-                  {isLast ? "Replay" : "Next step"}
-                  {isLast ? null : <ArrowRightIcon data-icon="inline-end" />}
-                </Button>
-              )
-            }
-          />
-        </div>
+        <ActiveStepList block={block} step={step} playback={playback} />
       )}
     </figure>
   );

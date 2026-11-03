@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useReducedMotion } from "motion/react";
 
 export const REVEAL_WAIT_MS = 2200;
-export const REVEAL_HOLD_MS = 3200;
+const REVEAL_HOLD_MS = 3200;
 /** How often each miner tries a new hash during the PoW race. */
 export const HASH_TICK_MS = 55;
 

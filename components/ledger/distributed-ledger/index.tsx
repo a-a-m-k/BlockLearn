@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useState } from "react";
+import { useLayoutEffect, useState, type ReactNode } from "react";
 import { RadioIcon, TriangleAlertIcon } from "lucide-react";
 
 import { Callout } from "@/components/callout";
@@ -8,12 +8,12 @@ import { Button } from "@/components/ui/button";
 import type { ContentBlock } from "@/lib/chapter-content";
 
 import { formatAmount } from "@/components/ledger/amounts";
+import type { AmountEntry, NetworkStatus } from "./model";
 import {
-  CHEATER,
-  gazeToward,
-  moodFor,
   PEOPLE,
   POSITION_CLASS,
+  peerCopyPresentation,
+  type NetworkPerson,
 } from "./scene";
 import { NetworkStage } from "./network-stage";
 import { NotebookCopy } from "./notebook-copy";
@@ -55,32 +55,9 @@ export function DistributedLedgerBlock({ block }: DistributedLedgerBlockProps) {
   } = useDistributedLedger(block);
   const stacked = useStackedCopies();
 
-  const mismatchCallout =
-    status === "mismatch" ? (
-      <Callout
-        tone="destructive"
-        icon={TriangleAlertIcon}
-        title="Mismatch detected."
-        className="flex-col items-center border-2 border-destructive bg-background text-center shadow-xl [&_p]:text-center [&_svg]:mt-0 [&_svg]:size-icon-lg"
-      >
-        Bob, Emma, and Alex still have the shared record—Alice&apos;s edit is
-        rejected and her copy snaps back.
-      </Callout>
-    ) : null;
-
   const broadcastCallout =
     status === "broadcasting" ? (
-      <Callout
-        tone="brand"
-        title="Broadcasting…"
-        className={
-          stacked
-            ? "caption justify-center bg-panel text-center shadow-lg [&_p]:text-center"
-            : "caption"
-        }
-      >
-        Every copy appends the same new entry—no one is left out.
-      </Callout>
+      <BroadcastCallout stacked={stacked} />
     ) : null;
 
   return (
@@ -88,63 +65,26 @@ export function DistributedLedgerBlock({ block }: DistributedLedgerBlockProps) {
       <NetworkStage
         status={status}
         overlay={
-          <>
-            {status === "broadcasting" ? (
-              <CenterSyncAnimation
-                key="sync"
-                onComplete={() => void finishBroadcast()}
-                detail={stacked ? broadcastCallout : null}
-              />
-            ) : null}
-            {mismatchCallout ? (
-              <div className="pointer-events-none absolute inset-0 z-20 bg-background/80">
-                <ScreenCenter
-                  trackViewport={stacked}
-                  className="w-[min(100%-2rem,24rem)]"
-                >
-                  <div className="rounded-lg bg-background">
-                    {mismatchCallout}
-                  </div>
-                </ScreenCenter>
-              </div>
-            ) : null}
-          </>
+          <StageOverlay
+            status={status}
+            stacked={stacked}
+            broadcastCallout={broadcastCallout}
+            onSyncComplete={() => void finishBroadcast()}
+          />
         }
       >
-        {PEOPLE.map((person) => {
-          const isCheater = person.name === CHEATER;
-          const mood = moodFor(person.name, status, mismatching);
-          const gaze =
-            mood === "angry" || mood === "disappointed"
-              ? gazeToward(person.position, "top-left")
-              : undefined;
-
-          return (
-            <NotebookCopy
-              key={person.name}
-              name={person.name}
-              position={person.position}
-              variant={person.variant}
-              mood={mood}
-              gaze={gaze}
-              entries={isCheater ? aliceEntries : shared}
-              editable={isCheater && status !== "broadcasting"}
-              tone={
-                isCheater && status === "mismatch"
-                  ? "destructive"
-                  : status === "mismatch" || status === "broadcasting"
-                    ? "brand"
-                    : "default"
-              }
-              amountTone={
-                isCheater && status === "mismatch" ? "destructive" : "default"
-              }
-              newRowIndex={newRowIndex}
-              onAmountChange={isCheater ? setAliceAmount : undefined}
-              className={POSITION_CLASS[person.position]}
-            />
-          );
-        })}
+        {PEOPLE.map((person) => (
+          <NetworkPeerCopy
+            key={person.name}
+            person={person}
+            status={status}
+            mismatching={mismatching}
+            shared={shared}
+            aliceEntries={aliceEntries}
+            newRowIndex={newRowIndex}
+            onAliceAmountChange={setAliceAmount}
+          />
+        ))}
       </NetworkStage>
 
       <div className="flex flex-col gap-3 border-t border-border bg-card p-4 sm:flex-row sm:items-center sm:p-5">
@@ -173,5 +113,104 @@ export function DistributedLedgerBlock({ block }: DistributedLedgerBlockProps) {
         </div>
       ) : null}
     </section>
+  );
+}
+
+function BroadcastCallout({ stacked }: { stacked: boolean }) {
+  return (
+    <Callout
+      tone="brand"
+      title="Broadcasting…"
+      className={
+        stacked
+          ? "caption justify-center bg-panel text-center shadow-lg [&_p]:text-center"
+          : "caption"
+      }
+    >
+      Every copy appends the same new entry—no one is left out.
+    </Callout>
+  );
+}
+
+function StageOverlay({
+  status,
+  stacked,
+  broadcastCallout,
+  onSyncComplete,
+}: {
+  status: NetworkStatus;
+  stacked: boolean;
+  broadcastCallout: ReactNode;
+  onSyncComplete: () => void;
+}) {
+  return (
+    <>
+      {status === "broadcasting" ? (
+        <CenterSyncAnimation
+          key="sync"
+          onComplete={onSyncComplete}
+          detail={stacked ? broadcastCallout : null}
+        />
+      ) : null}
+      {status === "mismatch" ? (
+        <div className="pointer-events-none absolute inset-0 z-20 bg-background/80">
+          <ScreenCenter
+            trackViewport={stacked}
+            className="w-[min(100%-2rem,24rem)]"
+          >
+            <div className="rounded-lg bg-background">
+              <Callout
+                tone="destructive"
+                icon={TriangleAlertIcon}
+                title="Mismatch detected."
+                className="flex-col items-center border-2 border-destructive bg-background text-center shadow-xl [&_p]:text-center [&_svg]:mt-0 [&_svg]:size-icon-lg"
+              >
+                Bob, Emma, and Alex still have the shared record—Alice&apos;s
+                edit is rejected and her copy snaps back.
+              </Callout>
+            </div>
+          </ScreenCenter>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+function NetworkPeerCopy({
+  person,
+  status,
+  mismatching,
+  shared,
+  aliceEntries,
+  newRowIndex,
+  onAliceAmountChange,
+}: {
+  person: NetworkPerson;
+  status: NetworkStatus;
+  mismatching: boolean;
+  shared: AmountEntry[];
+  aliceEntries: AmountEntry[];
+  newRowIndex: number | null;
+  onAliceAmountChange: (index: number, amount: number) => void;
+}) {
+  const presentation = peerCopyPresentation(person, status, mismatching);
+
+  return (
+    <NotebookCopy
+      name={person.name}
+      position={person.position}
+      variant={person.variant}
+      mood={presentation.mood}
+      gaze={presentation.gaze}
+      entries={presentation.isCheater ? aliceEntries : shared}
+      editable={presentation.editable}
+      tone={presentation.tone}
+      amountTone={presentation.amountTone}
+      newRowIndex={newRowIndex}
+      onAmountChange={
+        presentation.isCheater ? onAliceAmountChange : undefined
+      }
+      className={POSITION_CLASS[person.position]}
+    />
   );
 }

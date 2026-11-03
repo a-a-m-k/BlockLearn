@@ -22,7 +22,12 @@ import {
 import { PowRaceVisual } from "./miner-race";
 import { CompareResultCard } from "./result-card";
 import { StakeVisual } from "./validators-panel";
-import type { CompareAccent, ConsensusCompareBlock } from "./types";
+import type {
+  CompareAccent,
+  ConsensusCompareBlock,
+  ConsensusMiners,
+  ConsensusResult,
+} from "./types";
 import { DemoPlaybackBar, useDemoPlayback } from "./demo-playback";
 
 const METHOD_BLOCK = "diagram-panel diagram-pad-loose";
@@ -49,6 +54,218 @@ const METHOD_OPTIONS: {
   },
 ];
 
+type MethodShared = {
+  title: string;
+  subtitle: string;
+  text?: string;
+  items: string[];
+  result: ConsensusResult;
+  footer?: ConsensusCompareBlock["proofOfWork"]["footer"];
+  callout?: ConsensusCompareBlock["proofOfWork"]["callout"];
+};
+
+type MethodView =
+  | (MethodShared & {
+      accent: "pow";
+      demo:
+        | { kind: "miners"; title?: string; miners: ConsensusMiners }
+        | { kind: "none" };
+    })
+  | (MethodShared & {
+      accent: "stake";
+      demo:
+        | {
+            kind: "validators";
+            title?: string;
+            validators: NonNullable<
+              ConsensusCompareBlock["proofOfStake"]["validators"]
+            >;
+          }
+        | { kind: "none" };
+    });
+
+function toMethodView(
+  selected: CompareAccent,
+  block: ConsensusCompareBlock,
+): MethodView {
+  if (selected === "pow") {
+    const method = block.proofOfWork;
+    return {
+      accent: "pow",
+      title: method.title,
+      subtitle: method.subtitle,
+      text: method.text,
+      items: method.items,
+      result: method.result,
+      footer: method.footer,
+      callout: method.callout,
+      demo: method.miners
+        ? { kind: "miners", title: method.minersTitle, miners: method.miners }
+        : { kind: "none" },
+    };
+  }
+
+  const method = block.proofOfStake;
+  return {
+    accent: "stake",
+    title: method.title,
+    subtitle: method.subtitle,
+    text: method.text,
+    items: method.items,
+    result: method.result,
+    footer: method.footer,
+    callout: method.callout,
+    demo: method.validators
+      ? {
+          kind: "validators",
+          title: method.validatorsTitle,
+          validators: method.validators,
+        }
+      : { kind: "none" },
+  };
+}
+
+function MethodPicker({
+  selected,
+  onSelect,
+}: {
+  selected: CompareAccent;
+  onSelect: (value: CompareAccent) => void;
+}) {
+  return (
+    <ToggleGroup
+      value={[selected]}
+      onValueChange={(next) => {
+        const value = next[0];
+        if (value === "pow" || value === "stake") onSelect(value);
+      }}
+      variant="outline"
+      size="xl"
+      spacing={3}
+      className="mt-4 w-full min-w-0"
+      aria-label="Choose a consensus method"
+    >
+      {METHOD_OPTIONS.map(({ value, label, icon: Icon, itemClass }) => (
+        <ToggleGroupItem
+          key={value}
+          value={value}
+          className={cn(
+            "min-w-0 flex-1 shrink whitespace-normal px-2 text-body text-muted-foreground aria-pressed:bg-transparent aria-pressed:hover:bg-transparent sm:whitespace-nowrap sm:px-4",
+            itemClass,
+          )}
+        >
+          <Icon data-icon="inline-start" className="shrink-0" />
+          <span className="min-w-0 text-center leading-tight sm:hidden">
+            {value === "pow" ? "PoW" : "PoS"}
+          </span>
+          <span className="sr-only sm:hidden">{label}</span>
+          <span className="hidden min-w-0 sm:inline">{label}</span>
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
+  );
+}
+
+function MethodSteps({ method }: { method: MethodView }) {
+  const MethodIcon = method.accent === "pow" ? PickaxeIcon : ShieldCheckIcon;
+
+  return (
+    <div className={METHOD_BLOCK}>
+      <h3 className="flex flex-col gap-0.5 text-body font-semibold sm:flex-row sm:items-center sm:gap-1.5">
+        <span className="flex items-center gap-1.5">
+          <MethodIcon
+            className={cn(
+              "size-7 shrink-0 sm:size-6",
+              accentText(method.accent),
+            )}
+            aria-hidden
+          />
+          <span className={cn("whitespace-nowrap", accentText(method.accent))}>
+            {method.title}
+          </span>
+        </span>
+        <span className="font-normal text-muted-foreground sm:whitespace-nowrap">
+          — {method.subtitle}
+        </span>
+      </h3>
+      <ol className="mt-4 flex flex-col">
+        {method.items.map((item, index, arr) => (
+          <li
+            key={item}
+            className="grid grid-cols-[1.75rem_1fr] gap-x-3 sm:grid-cols-[1.5rem_1fr]"
+          >
+            <div className="flex flex-col items-center">
+              <span
+                className={cn(
+                  "flex size-7 shrink-0 items-center justify-center rounded-full caption font-semibold sm:size-6",
+                  accentFill(method.accent),
+                )}
+              >
+                {index + 1}
+              </span>
+              {index < arr.length - 1 ? (
+                <div
+                  className={cn(
+                    "mt-1 w-px flex-1 border-l border-dashed",
+                    accentBorder(method.accent),
+                  )}
+                  aria-hidden
+                />
+              ) : null}
+            </div>
+            <p className="pb-3 text-body text-foreground">{richText(item)}</p>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function MethodDemo({
+  method,
+  playback,
+}: {
+  method: MethodView;
+  playback: ReturnType<typeof useDemoPlayback>;
+}) {
+  if (method.demo.kind === "miners") {
+    return (
+      <PowRaceVisual
+        title={method.demo.title}
+        miners={method.demo.miners}
+        result={method.result}
+        accent={method.accent}
+        playing={playback.playing}
+        done={playback.done}
+        onComplete={playback.complete}
+      />
+    );
+  }
+
+  if (method.demo.kind === "validators") {
+    return (
+      <StakeVisual
+        title={method.demo.title}
+        validators={method.demo.validators}
+        result={method.result}
+        accent={method.accent}
+        playing={playback.playing}
+        done={playback.done}
+        idle={playback.idle}
+        onComplete={playback.complete}
+      />
+    );
+  }
+
+  return (
+    <div className={cn(COMPARE_SPLIT, "xl:items-center")}>
+      <div className="hidden xl:block" aria-hidden />
+      <div className="hidden xl:block" aria-hidden />
+      <CompareResultCard result={method.result} accent={method.accent} />
+    </div>
+  );
+}
+
 export function ConsensusComparePanel({
   block,
 }: {
@@ -56,12 +273,9 @@ export function ConsensusComparePanel({
 }) {
   const [selected, setSelected] = useState<CompareAccent>("pow");
   const playback = useDemoPlayback();
-  const method =
-    selected === "pow"
-      ? { ...block.proofOfWork, accent: "pow" as const }
-      : { ...block.proofOfStake, accent: "stake" as const };
-  const isPow = method.accent === "pow";
-  const MethodIcon = isPow ? PickaxeIcon : ShieldCheckIcon;
+  const method = toMethodView(selected, block);
+  const validatorCount =
+    method.demo.kind === "validators" ? method.demo.validators.length : undefined;
 
   return (
     <section className="flex flex-col gap-5">
@@ -75,95 +289,15 @@ export function ConsensusComparePanel({
         <p className="mt-2 text-center caption text-muted-foreground">
           Switch methods below, then play the demo to compare.
         </p>
-        <ToggleGroup
-          value={[selected]}
-          onValueChange={(next) => {
-            const value = next[0];
-            if (value === "pow" || value === "stake") {
-              setSelected(value);
-              playback.reset();
-            }
+        <MethodPicker
+          selected={selected}
+          onSelect={(value) => {
+            setSelected(value);
+            playback.reset();
           }}
-          variant="outline"
-          size="xl"
-          spacing={3}
-          className="mt-4 w-full min-w-0"
-          aria-label="Choose a consensus method"
-        >
-          {METHOD_OPTIONS.map(({ value, label, icon: Icon, itemClass }) => (
-            <ToggleGroupItem
-              key={value}
-              value={value}
-              className={cn(
-                "min-w-0 flex-1 shrink whitespace-normal px-2 text-body text-muted-foreground aria-pressed:bg-transparent aria-pressed:hover:bg-transparent sm:whitespace-nowrap sm:px-4",
-                itemClass,
-              )}
-            >
-              <Icon data-icon="inline-start" className="shrink-0" />
-              <span className="min-w-0 text-center leading-tight sm:hidden">
-                {value === "pow" ? "PoW" : "PoS"}
-              </span>
-              <span className="sr-only sm:hidden">{label}</span>
-              <span className="hidden min-w-0 sm:inline">{label}</span>
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
+        />
       </div>
-      <div className={METHOD_BLOCK}>
-        <h3 className="flex flex-col gap-0.5 text-body font-semibold sm:flex-row sm:items-center sm:gap-1.5">
-          <span className="flex items-center gap-1.5">
-            <MethodIcon
-              className={cn(
-                "size-7 shrink-0 sm:size-6",
-                accentText(method.accent),
-              )}
-              aria-hidden
-            />
-            <span
-              className={cn(
-                "whitespace-nowrap",
-                accentText(method.accent),
-              )}
-            >
-              {method.title}
-            </span>
-          </span>
-          <span className="font-normal text-muted-foreground sm:whitespace-nowrap">
-            — {method.subtitle}
-          </span>
-        </h3>
-        <ol className="mt-4 flex flex-col">
-          {method.items.map((item, index, arr) => (
-            <li
-              key={item}
-              className="grid grid-cols-[1.75rem_1fr] gap-x-3 sm:grid-cols-[1.5rem_1fr]"
-            >
-              <div className="flex flex-col items-center">
-                <span
-                  className={cn(
-                    "flex size-7 shrink-0 items-center justify-center rounded-full caption font-semibold sm:size-6",
-                    accentFill(method.accent),
-                  )}
-                >
-                  {index + 1}
-                </span>
-                {index < arr.length - 1 ? (
-                  <div
-                    className={cn(
-                      "mt-1 w-px flex-1 border-l border-dashed",
-                      accentBorder(method.accent),
-                    )}
-                    aria-hidden
-                  />
-                ) : null}
-              </div>
-              <p className="pb-3 text-body text-foreground">
-                {richText(item)}
-              </p>
-            </li>
-          ))}
-        </ol>
-      </div>
+      <MethodSteps method={method} />
       <div className="flex flex-col gap-4">
         <DemoPlaybackBar
           playing={playback.playing}
@@ -171,40 +305,12 @@ export function ConsensusComparePanel({
           reducedMotion={playback.reducedMotion}
           onPlay={playback.play}
         />
-        {method.miners ? (
-          <PowRaceVisual
-            title={method.minersTitle}
-            miners={method.miners}
-            result={method.result}
-            accent={method.accent}
-            playing={playback.playing}
-            done={playback.done}
-            onComplete={playback.complete}
-          />
-        ) : method.validators ? (
-          <StakeVisual
-            title={method.validatorsTitle}
-            validators={method.validators}
-            result={method.result}
-            accent={method.accent}
-            playing={playback.playing}
-            done={playback.done}
-            idle={playback.idle}
-            onComplete={playback.complete}
-          />
-        ) : (
-          <div className={cn(COMPARE_SPLIT, "xl:items-center")}>
-            <div className="hidden xl:block" aria-hidden />
-            <div className="hidden xl:block" aria-hidden />
-            <CompareResultCard result={method.result} accent={method.accent} />
-          </div>
-        )}
+        <MethodDemo method={method} playback={playback} />
         {method.footer ? (
           <MethodFooter
             footer={{
               ...method.footer,
-              attempts:
-                method.validators?.length ?? method.footer.attempts,
+              attempts: validatorCount ?? method.footer.attempts,
             }}
             accent={method.accent}
             playing={playback.playing}
@@ -214,7 +320,7 @@ export function ConsensusComparePanel({
       </div>
       {method.callout ? (
         <Callout
-          tone={isPow ? "pow" : "stake"}
+          tone={method.accent === "pow" ? "pow" : "stake"}
           icon={LightbulbIcon}
           title={method.callout.title}
         >

@@ -6,7 +6,7 @@ export type StakeValidator = {
 
 export type ValidatorMood = "neutral" | "happy" | "disappointed";
 
-export function maxStakeIndex(validators: readonly { stake: number }[]) {
+function maxStakeIndex(validators: readonly { stake: number }[]) {
   let best = 0;
   for (let i = 1; i < validators.length; i++) {
     if (validators[i].stake > validators[best].stake) best = i;

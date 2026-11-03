@@ -1,7 +1,6 @@
-import { MAX_AMOUNT, type AmountEntry } from "@/components/ledger/types";
+import type { AmountEntry } from "@/components/ledger/types";
 
 export type { AmountEntry };
-export { MAX_AMOUNT };
 
 export type NetworkStatus = "synced" | "mismatch" | "broadcasting";
 

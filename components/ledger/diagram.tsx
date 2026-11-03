@@ -19,7 +19,7 @@ import {
 } from "@/components/ledger/person-face";
 import { cn } from "@/lib/utils";
 
-export type LedgerPerson = {
+type LedgerPerson = {
   name: string;
   mood: FaceMood;
   variant: FaceVariant;
@@ -28,7 +28,7 @@ export type LedgerPerson = {
   gaze?: FaceGaze;
 };
 
-export type KeeperPerson = Omit<LedgerPerson, "position">;
+type KeeperPerson = Omit<LedgerPerson, "position">;
 
 type CentralizedLedgerDiagramProps = {
   keeper: KeeperPerson;

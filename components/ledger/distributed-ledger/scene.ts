@@ -16,7 +16,7 @@ export type NetworkPerson = {
   position: PersonPosition;
 };
 
-export const CHEATER = "Alice";
+const CHEATER = "Alice";
 
 export const PEOPLE: NetworkPerson[] = [
   { name: "Alice", variant: FACE_BY_NAME.Alice, position: "top-left" },
@@ -89,14 +89,11 @@ const POSITION_VEC: Record<PersonPosition, Vec2> = {
   "bottom-right": { x: 1, y: 1 },
 };
 
-export function gazeToward(
-  from: PersonPosition,
-  to: PersonPosition,
-): FaceGaze {
+function gazeToward(from: PersonPosition, to: PersonPosition): FaceGaze {
   return gazeTowardFromMap(from, to, POSITION_VEC);
 }
 
-export function moodFor(
+function moodFor(
   name: string,
   status: NetworkStatus,
   mismatching: boolean,
@@ -106,4 +103,36 @@ export function moodFor(
     return name === CHEATER ? "happy" : "angry";
   }
   return "neutral";
+}
+
+function notebookTone(
+  isCheater: boolean,
+  status: NetworkStatus,
+): "destructive" | "brand" | "default" {
+  if (isCheater && status === "mismatch") return "destructive";
+  if (status === "mismatch" || status === "broadcasting") return "brand";
+  return "default";
+}
+
+/** Presentation fields for a peer's notebook copy, derived from scene state. */
+export function peerCopyPresentation(
+  person: NetworkPerson,
+  status: NetworkStatus,
+  mismatching: boolean,
+) {
+  const isCheater = person.name === CHEATER;
+  const mood = moodFor(person.name, status, mismatching);
+  const angry = mood === "angry" || mood === "disappointed";
+
+  return {
+    isCheater,
+    mood,
+    gaze: angry ? gazeToward(person.position, "top-left") : undefined,
+    tone: notebookTone(isCheater, status),
+    amountTone:
+      isCheater && status === "mismatch"
+        ? ("destructive" as const)
+        : ("default" as const),
+    editable: isCheater && status !== "broadcasting",
+  };
 }

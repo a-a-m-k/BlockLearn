@@ -13,5 +13,5 @@ export const ringFade = {
   ease: [0.22, 1, 0.36, 1] as const,
 };
 
-export const VISUAL_FRAME =
+export const STEP_VISUAL_FRAME =
   "flex h-full min-h-0 w-full min-w-0 sm:min-h-36";

@@ -7,7 +7,7 @@ import { MiniFace } from "@/components/hash-chain/visuals";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-import { VISUAL_FRAME } from "./motion";
+import { STEP_VISUAL_FRAME } from "./motion";
 import type { CreateTransactionContent } from "./types";
 
 export function CreateForm({
@@ -20,7 +20,7 @@ export function CreateForm({
   onSend: () => void;
 }) {
   return (
-    <div className={cn(VISUAL_FRAME, "flex-col justify-between gap-2")}>
+    <div className={cn(STEP_VISUAL_FRAME, "flex-col justify-between gap-2")}>
       <dl className="grid grid-cols-2 gap-2 sm:gap-3">
         <FormRow label="From">
           <span className="flex min-w-0 items-center gap-2">

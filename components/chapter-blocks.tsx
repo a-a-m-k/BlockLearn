@@ -30,82 +30,92 @@ export function ChapterBlocks({ blocks }: ChapterBlocksProps) {
   );
 }
 
+function SectionAside({
+  title,
+  text,
+}: {
+  title: string;
+  text: string;
+}) {
+  return (
+    <aside className="flex items-start gap-3 rounded-lg border border-border bg-surface p-4">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-accent text-brand-text">
+        <TerminalIcon className="size-icon" aria-hidden />
+      </span>
+      <p className="min-w-0 text-chrome leading-snug">
+        <span className="block font-medium text-foreground">{title}</span>
+        <span className="mt-1 block caption text-muted-foreground">{text}</span>
+      </p>
+    </aside>
+  );
+}
+
+function SectionBlock({
+  block,
+}: {
+  block: Extract<ContentBlock, { type: "section" }>;
+}) {
+  const heading = block.title ? (
+    <h2 className="text-title font-semibold tracking-tight text-foreground">
+      {richText(block.title)}
+    </h2>
+  ) : null;
+  const body = block.blocks.map((child, index) => (
+    <ContentBlockView key={`${child.type}-${index}`} block={child} />
+  ));
+
+  return (
+    <section className="flex flex-col gap-4 scroll-mt-24 border-t border-border pt-8 sm:gap-5">
+      {block.eyebrow ? (
+        <p className="caption font-medium tracking-[0.16em] text-brand-text uppercase">
+          {block.eyebrow}
+        </p>
+      ) : null}
+      {block.aside ? (
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+          <div className="flex min-w-0 flex-col gap-4 sm:gap-5">
+            {heading}
+            {body}
+          </div>
+          <SectionAside title={block.aside.title} text={block.aside.text} />
+        </div>
+      ) : (
+        <>
+          {heading}
+          {body}
+        </>
+      )}
+    </section>
+  );
+}
+
 function ContentBlockView({ block }: { block: ContentBlock }) {
   if (isDiagramBlock(block)) {
     return <ChapterDiagram block={block} />;
   }
-
-  switch (block.type) {
-    case "section": {
-      const heading = block.title ? (
-        <h2 className="text-title font-semibold tracking-tight text-foreground">
-          {richText(block.title)}
-        </h2>
-      ) : null;
-      const body = block.blocks.map((child, index) => (
-        <ContentBlockView key={`${child.type}-${index}`} block={child} />
-      ));
-
-      return (
-        <section className="flex flex-col gap-4 scroll-mt-24 border-t border-border pt-8 sm:gap-5">
-          {block.eyebrow ? (
-            <p className="caption font-medium tracking-[0.16em] text-brand-text uppercase">
-              {block.eyebrow}
-            </p>
-          ) : null}
-          {block.aside ? (
-            <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
-              <div className="flex min-w-0 flex-col gap-4 sm:gap-5">
-                {heading}
-                {body}
-              </div>
-              <aside className="flex items-start gap-3 rounded-lg border border-border bg-surface p-4">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-accent text-brand-text">
-                  <TerminalIcon className="size-icon" aria-hidden />
-                </span>
-                <p className="min-w-0 text-chrome leading-snug">
-                  <span className="block font-medium text-foreground">
-                    {block.aside.title}
-                  </span>
-                  <span className="mt-1 block caption text-muted-foreground">
-                    {block.aside.text}
-                  </span>
-                </p>
-              </aside>
-            </div>
-          ) : (
-            <>
-              {heading}
-              {body}
-            </>
-          )}
-        </section>
-      );
-    }
-    case "paragraph":
-      return <p>{richText(block.text)}</p>;
-    case "list":
-      return (
-        <ul className="flex list-disc flex-col gap-1.5 pl-5 sm:gap-2 marker:text-brand-text">
-          {block.items.map((item) => (
-            <li key={item.label}>
-              <span className="font-medium text-foreground">{item.label}</span>
-              <span> — {richText(item.text)}</span>
-            </li>
-          ))}
-        </ul>
-      );
-    case "callout":
-      return (
-        <Callout tone="brand" icon={SparklesIcon} title={block.title}>
-          {richText(block.text)}
-        </Callout>
-      );
-    case "steps":
-      return <StepsPanel block={block} />;
-    default: {
-      const _exhaustive: never = block;
-      return _exhaustive;
-    }
+  if (block.type === "section") return <SectionBlock block={block} />;
+  if (block.type === "paragraph") return <p>{richText(block.text)}</p>;
+  if (block.type === "list") {
+    return (
+      <ul className="flex list-disc flex-col gap-1.5 pl-5 sm:gap-2 marker:text-brand-text">
+        {block.items.map((item) => (
+          <li key={item.label}>
+            <span className="font-medium text-foreground">{item.label}</span>
+            <span> — {richText(item.text)}</span>
+          </li>
+        ))}
+      </ul>
+    );
   }
+  if (block.type === "callout") {
+    return (
+      <Callout tone="brand" icon={SparklesIcon} title={block.title}>
+        {richText(block.text)}
+      </Callout>
+    );
+  }
+  if (block.type === "steps") return <StepsPanel block={block} />;
+
+  const _exhaustive: never = block;
+  return _exhaustive;
 }

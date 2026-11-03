@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { ArrowLeftIcon, CircleCheckIcon, PointerIcon } from "lucide-react";
+import { CircleCheckIcon, PointerIcon } from "lucide-react";
 
 import type { AmountEditSession } from "@/components/mobile-editable-numeric";
 import { cn } from "@/lib/utils";
@@ -22,35 +22,6 @@ export function useAmountGuide() {
   const reset = useCallback(() => setPhase("hint"), []);
 
   return { phase, onEditSession, reset };
-}
-
-/** Desktop callout that points at the first amount’s pencil. */
-export function TransactionHintBubble({
-  className,
-  title = "Try changing a transaction",
-  detail,
-}: {
-  className?: string;
-  title?: string;
-  detail?: string;
-}) {
-  return (
-    <div className={cn("pointer-events-none flex items-center", className)}>
-      <ArrowLeftIcon className="size-icon shrink-0 text-brand" aria-hidden />
-      <aside
-        role="note"
-        className="callout flex w-max max-w-56 items-start border-brand/40 bg-surface-raised text-foreground shadow-brand"
-      >
-        <PointerIcon className="size-icon shrink-0 text-brand-text" aria-hidden />
-        <p className="min-w-0">
-          <span className="block font-semibold text-brand-text">{title}</span>
-          {detail ? (
-            <span className="block text-chrome text-muted-foreground">{detail}</span>
-          ) : null}
-        </p>
-      </aside>
-    </div>
-  );
 }
 
 /** Phone banner for the hint, the confirm step, and the saved step. */

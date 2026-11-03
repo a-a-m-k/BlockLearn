@@ -6,7 +6,7 @@ import type { ChapterSlug } from "@/lib/course";
  *
  * Keep counts in sync with `quizzesByChapterSlug` — `lib/content.test.ts` checks.
  */
-export const quizQuestionCounts = {
+const quizQuestionCounts = {
   "what-is-blockchain": 3,
   "blocks-and-hashes": 3,
   consensus: 3,

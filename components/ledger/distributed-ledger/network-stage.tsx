@@ -11,11 +11,18 @@ import {
 } from "react";
 import { NetworkIcon } from "lucide-react";
 
-import type { ConnectorLine } from "@/components/ledger/connector-lines";
 import { cn } from "@/lib/utils";
 
 import type { NetworkStatus } from "./model";
 import { CONNECTIONS, type PersonPosition } from "./scene";
+
+type ConnectorLine = {
+  id: string;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+};
 
 type StagePoint = { x: number; y: number };
 

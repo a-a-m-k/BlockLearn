@@ -1,0 +1,16 @@
+{
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+  "minimumVersion": "3.38.0",
+  "ignoreDependencies": ["eslint-config-next"],
+  "health": {
+    "cyclomaticPolicy": "literal-membership",
+    "maxCyclomatic": 12,
+    "maxCognitive": 18,
+    "maxCrap": 100,
+    "maxUnitSize": 120
+  },
+  "rules": {
+    "unused-dev-dependencies": "off",
+    "dev-dependencies-in-production": "off"
+  }
+}

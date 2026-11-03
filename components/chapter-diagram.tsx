@@ -1,8 +1,9 @@
 "use client";
 
+import type { ReactNode } from "react";
 import dynamic from "next/dynamic";
 
-import type { DiagramBlock } from "@/components/diagram-block";
+import type { DiagramBlock, DiagramBlockType } from "@/components/diagram-block";
 import { cn } from "@/lib/utils";
 
 function DiagramLoading() {
@@ -110,35 +111,28 @@ const SmartContractRuleBuilder = dynamic(
   { loading: DiagramLoading, ssr: true },
 );
 
+const DIAGRAM_RENDERERS: {
+  [K in DiagramBlockType]: (
+    block: Extract<DiagramBlock, { type: K }>,
+  ) => ReactNode;
+} = {
+  "owe-ledger": (block) => <OweLedgerBlock block={block} />,
+  "distributed-ledger": (block) => <DistributedLedgerBlock block={block} />,
+  "hash-chain": () => <HashChainBlock />,
+  "hash-check": () => <HashCheckBlock />,
+  "create-transaction": (block) => <CreateTransactionBlock block={block} />,
+  "explore-transaction": (block) => <ExploreTransactionBlock block={block} />,
+  "consensus-compare": (block) => <ConsensusComparePanel block={block} />,
+  "smart-contract-flow": () => <SmartContractFlow />,
+  "smart-contract-if-then": () => <SmartContractIfThen />,
+  "smart-contract-vault": () => <SmartContractVault />,
+  "smart-contract-uses": () => <SmartContractUses />,
+  "smart-contract-builder": () => <SmartContractRuleBuilder />,
+};
+
 export function ChapterDiagram({ block }: { block: DiagramBlock }) {
-  switch (block.type) {
-    case "owe-ledger":
-      return <OweLedgerBlock block={block} />;
-    case "distributed-ledger":
-      return <DistributedLedgerBlock block={block} />;
-    case "hash-chain":
-      return <HashChainBlock />;
-    case "hash-check":
-      return <HashCheckBlock />;
-    case "create-transaction":
-      return <CreateTransactionBlock block={block} />;
-    case "explore-transaction":
-      return <ExploreTransactionBlock block={block} />;
-    case "consensus-compare":
-      return <ConsensusComparePanel block={block} />;
-    case "smart-contract-flow":
-      return <SmartContractFlow />;
-    case "smart-contract-if-then":
-      return <SmartContractIfThen />;
-    case "smart-contract-vault":
-      return <SmartContractVault />;
-    case "smart-contract-uses":
-      return <SmartContractUses />;
-    case "smart-contract-builder":
-      return <SmartContractRuleBuilder />;
-    default: {
-      const _exhaustive: never = block;
-      return _exhaustive;
-    }
-  }
+  const render = DIAGRAM_RENDERERS[block.type] as (
+    block: DiagramBlock,
+  ) => ReactNode;
+  return render(block);
 }

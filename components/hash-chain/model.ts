@@ -1,12 +1,6 @@
 import { hashHex, serializeBlock } from "@/lib/fingerprint";
 import type { AmountEntry } from "@/components/ledger/types";
 
-export {
-  FACE_BY_NAME,
-  faceFor,
-  faceIfKnown,
-} from "@/components/ledger/characters";
-
 export const TRANSACTIONS = [
   { from: "Alice", to: "Bob", amount: 22 },
   { from: "Bob", to: "Emma", amount: 2 },

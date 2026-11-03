@@ -2,7 +2,7 @@ import type { ComponentProps } from "react";
 
 import { cn } from "@/lib/utils";
 
-export const SC_PANEL =
+const SC_PANEL =
   "diagram-panel diagram-pad flex w-full min-w-0 flex-col gap-4 text-foreground";
 
 export const SC_STEP =

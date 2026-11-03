@@ -138,7 +138,7 @@ export function StakeVisual({
   );
 }
 
-export function ValidatorsPanel({
+function ValidatorsPanel({
   title,
   validators,
   highlightedIndex,
@@ -160,95 +160,129 @@ export function ValidatorsPanel({
         <p className="min-h-6 text-center text-foreground">{title}</p>
       ) : null}
       <div className="grid flex-1 grid-cols-[repeat(3,minmax(5rem,1fr))] items-start gap-3">
-        {validators.map((validator, index) => {
-          const active = highlightedIndex === index;
-          const selected = locked && index === winnerIndex;
-          const emphasized = active || selected;
-
-          return (
-            <motion.div
-              key={validator.name}
-              className="flex flex-col items-center gap-1.5 rounded-lg px-1 py-1"
-              initial={false}
-              animate={{
-                transform: emphasized ? "scale(1.06)" : "scale(1)",
-                opacity: locked && !selected ? 0.55 : 1,
-              }}
-              transition={springHighlight}
-            >
-              <p
-                className={cn(
-                  "text-body font-medium",
-                  emphasized ? "text-stake" : "text-foreground",
-                )}
-              >
-                {validator.name}
-              </p>
-              <div className="flex flex-col items-center gap-1">
-                <div
-                  className={cn(
-                    FACE_CHROME_CLASS,
-                    "size-12",
-                    emphasized && "border-stake",
-                  )}
-                >
-                  <LedgerPersonFace
-                    variant={faceFor(validator.name)}
-                    mood={validatorMood({ selected, locked, active })}
-                    className={FACE_INSET_CLASS}
-                  />
-                </div>
-                <CoinsIcon
-                  className={cn(
-                    "size-6",
-                    emphasized ? "text-stake" : "text-muted-foreground",
-                  )}
-                  strokeWidth={1.25}
-                  aria-hidden
-                />
-              </div>
-              <p
-                className={cn(
-                  "caption",
-                  idle || emphasized ? "text-stake" : "text-muted-foreground",
-                )}
-              >
-                {stakeLabel(idle)}
-              </p>
-              <p
-                className={cn(
-                  "text-body font-semibold tabular-nums leading-none",
-                  idle && "invisible",
-                  emphasized ? "text-stake" : "text-foreground",
-                )}
-              >
-                {validator.stake}
-              </p>
-              <div
-                className={cn(
-                  "flex flex-wrap justify-center gap-0.5",
-                  idle && "invisible",
-                )}
-                aria-hidden
-              >
-                {Array.from({ length: coinCount(validator.stake, maxStake) }).map(
-                  (_, i) => (
-                    <span
-                      key={i}
-                      className={cn(
-                        "text-sm",
-                        emphasized ? "text-stake" : "text-muted-foreground",
-                      )}
-                    >
-                      $
-                    </span>
-                  ),
-                )}
-              </div>
-            </motion.div>
-          );
-        })}
+        {validators.map((validator, index) => (
+          <ValidatorCard
+            key={validator.name}
+            validator={validator}
+            active={highlightedIndex === index}
+            selected={locked && index === winnerIndex}
+            locked={locked}
+            idle={idle}
+            maxStake={maxStake}
+          />
+        ))}
       </div>
     </div>
+  );
+}
+
+function stakeTone(emphasized: boolean, idle = false) {
+  if (idle || emphasized) return "text-stake";
+  return "text-muted-foreground";
+}
+
+function ValidatorCoins({
+  stake,
+  maxStake,
+  emphasized,
+  idle,
+}: {
+  stake: number;
+  maxStake: number;
+  emphasized: boolean;
+  idle: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex flex-wrap justify-center gap-0.5",
+        idle && "invisible",
+      )}
+      aria-hidden
+    >
+      {Array.from({ length: coinCount(stake, maxStake) }).map((_, i) => (
+        <span
+          key={i}
+          className={cn(
+            "text-sm",
+            emphasized ? "text-stake" : "text-muted-foreground",
+          )}
+        >
+          $
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function ValidatorCard({
+  validator,
+  active,
+  selected,
+  locked,
+  idle,
+  maxStake,
+}: {
+  validator: Validators[number];
+  active: boolean;
+  selected: boolean;
+  locked: boolean;
+  idle: boolean;
+  maxStake: number;
+}) {
+  const emphasized = active || selected;
+  const nameClass = emphasized ? "text-stake" : "text-foreground";
+  const stakeClass = emphasized ? "text-stake" : "text-foreground";
+
+  return (
+    <motion.div
+      className="flex flex-col items-center gap-1.5 rounded-lg px-1 py-1"
+      initial={false}
+      animate={{
+        transform: emphasized ? "scale(1.06)" : "scale(1)",
+        opacity: locked && !selected ? 0.55 : 1,
+      }}
+      transition={springHighlight}
+    >
+      <p className={cn("text-body font-medium", nameClass)}>{validator.name}</p>
+      <div className="flex flex-col items-center gap-1">
+        <div
+          className={cn(
+            FACE_CHROME_CLASS,
+            "size-12",
+            emphasized && "border-stake",
+          )}
+        >
+          <LedgerPersonFace
+            variant={faceFor(validator.name)}
+            mood={validatorMood({ selected, locked, active })}
+            className={FACE_INSET_CLASS}
+          />
+        </div>
+        <CoinsIcon
+          className={cn("size-6", stakeTone(emphasized))}
+          strokeWidth={1.25}
+          aria-hidden
+        />
+      </div>
+      <p className={cn("caption", stakeTone(emphasized, idle))}>
+        {stakeLabel(idle)}
+      </p>
+      <p
+        className={cn(
+          "text-body font-semibold tabular-nums leading-none",
+          idle && "invisible",
+          stakeClass,
+        )}
+      >
+        {validator.stake}
+      </p>
+      <ValidatorCoins
+        stake={validator.stake}
+        maxStake={maxStake}
+        emphasized={emphasized}
+        idle={idle}
+      />
+    </motion.div>
   );
 }

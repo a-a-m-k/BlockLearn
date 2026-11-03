@@ -23,23 +23,82 @@ const messageTone = {
   plain: "text-foreground",
 } as const;
 
+function VaultBadge({
+  unlocked,
+  reduced,
+}: {
+  unlocked: boolean;
+  reduced: boolean | null;
+}) {
+  return (
+    <motion.div
+      animate={unlocked && !reduced ? { scale: [1, 1.06, 1] } : { scale: 1 }}
+      transition={{ duration: 0.45 }}
+      className={cn(
+        "flex size-16 items-center justify-center rounded-full border",
+        unlocked
+          ? "border-brand text-brand-text"
+          : "border-muted-foreground/50 text-muted-foreground",
+      )}
+    >
+      {unlocked ? (
+        <LockOpenIcon className="size-8" strokeWidth={1.5} />
+      ) : (
+        <LockIcon className="size-8" strokeWidth={1.5} />
+      )}
+    </motion.div>
+  );
+}
+
+function VaultActions({
+  unlocked,
+  ready,
+  onWithdraw,
+  onAdvance,
+  onReset,
+}: {
+  unlocked: boolean;
+  ready: boolean;
+  onWithdraw: () => void;
+  onAdvance: () => void;
+  onReset: () => void;
+}) {
+  return (
+    <>
+      <div className="flex w-full max-w-sm flex-col gap-2 sm:flex-row">
+        <Button
+          type="button"
+          variant="outline"
+          className="flex-1"
+          disabled={unlocked}
+          onClick={onWithdraw}
+        >
+          Try to withdraw
+        </Button>
+        <Button
+          type="button"
+          variant={ready && !unlocked ? "cta" : "softOutline"}
+          className="flex-1"
+          disabled={unlocked || ready}
+          onClick={onAdvance}
+        >
+          10 days later
+        </Button>
+      </div>
+      {unlocked ? (
+        <Button type="button" variant="ghost" size="sm" onClick={onReset}>
+          Reset lock
+        </Button>
+      ) : null}
+    </>
+  );
+}
+
 export function SmartContractVault() {
   const reduced = useReducedMotion();
   const [state, setState] = useState<VaultState>("locked");
   const view = vaultView(state);
   const { unlocked, ready } = view;
-
-  function tryWithdraw() {
-    setState((current) => withdraw(current));
-  }
-
-  function advanceTime() {
-    setState((current) => advanceLock(current));
-  }
-
-  function reset() {
-    setState(resetLock());
-  }
 
   return (
     <figure aria-label="Staking lock smart contract">
@@ -57,22 +116,7 @@ export function SmartContractVault() {
               : "border-muted-foreground/50",
           )}
         >
-          <motion.div
-            animate={unlocked && !reduced ? { scale: [1, 1.06, 1] } : { scale: 1 }}
-            transition={{ duration: 0.45 }}
-            className={cn(
-              "flex size-16 items-center justify-center rounded-full border",
-              unlocked
-                ? "border-brand text-brand-text"
-                : "border-muted-foreground/50 text-muted-foreground",
-            )}
-          >
-            {unlocked ? (
-              <LockOpenIcon className="size-8" strokeWidth={1.5} />
-            ) : (
-              <LockIcon className="size-8" strokeWidth={1.5} />
-            )}
-          </motion.div>
+          <VaultBadge unlocked={unlocked} reduced={reduced} />
 
           <div className="text-center">
             <p className="text-body font-semibold text-foreground">
@@ -89,32 +133,13 @@ export function SmartContractVault() {
             </p>
           </div>
 
-          <div className="flex w-full max-w-sm flex-col gap-2 sm:flex-row">
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1"
-              disabled={unlocked}
-              onClick={tryWithdraw}
-            >
-              Try to withdraw
-            </Button>
-            <Button
-              type="button"
-              variant={ready && !unlocked ? "cta" : "softOutline"}
-              className="flex-1"
-              disabled={unlocked || ready}
-              onClick={advanceTime}
-            >
-              10 days later
-            </Button>
-          </div>
-
-          {unlocked ? (
-            <Button type="button" variant="ghost" size="sm" onClick={reset}>
-              Reset lock
-            </Button>
-          ) : null}
+          <VaultActions
+            unlocked={unlocked}
+            ready={ready}
+            onWithdraw={() => setState((current) => withdraw(current))}
+            onAdvance={() => setState((current) => advanceLock(current))}
+            onReset={() => setState(resetLock())}
+          />
         </div>
 
         <AnimatePresence mode="wait">

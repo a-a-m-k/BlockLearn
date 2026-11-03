@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MutableRefObject,
+} from "react";
 import { cva } from "class-variance-authority";
 import {
   CheckIcon,
@@ -162,6 +169,17 @@ type QuizQuestionBlockProps = {
   onRetry: () => void;
 };
 
+/** Selection + roving-focus state shared by the radiogroup and each option. */
+type QuizOptionControls = {
+  selectedId: string | null;
+  answered: boolean;
+  locked: boolean;
+  focusIndex: number;
+  optionRefs: MutableRefObject<Array<HTMLButtonElement | null>>;
+  onSelect: (optionId: string) => void;
+  onFocusIndex: (index: number) => void;
+};
+
 function QuizQuestionBlock({
   index,
   total,
@@ -184,6 +202,15 @@ function QuizQuestionBlock({
     explanation: question.explanation,
   });
   const { answered, isCorrect, locked, feedback } = attempt;
+  const controls: QuizOptionControls = {
+    selectedId,
+    answered,
+    locked,
+    focusIndex,
+    optionRefs,
+    onSelect,
+    onFocusIndex: setFocusIndex,
+  };
 
   function focusOption(nextIndex: number) {
     const next = Math.max(0, Math.min(question.options.length - 1, nextIndex));
@@ -191,151 +218,39 @@ function QuizQuestionBlock({
     optionRefs.current[next]?.focus();
   }
 
-  function handleRadiogroupKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    if (locked) return;
-
-    const action = rovingKeyAction(
-      event.key,
-      focusIndex,
-      question.options.length,
-      { selectOnEnter: true },
-    );
-    if (action.type === "none") return;
-
-    event.preventDefault();
-    if (action.type === "move") {
-      focusOption(action.index);
-      return;
-    }
-
-    const option = question.options[action.index];
-    if (option) onSelect(option.id);
-  }
+  const shellClass = locked
+    ? "border-success/30"
+    : answered && !isCorrect
+      ? "border-destructive/30"
+      : "border-border";
 
   return (
     <div
       className={cn(
         "rounded-xl border bg-background/40 p-4 transition-colors sm:p-5",
-        locked && "border-success/30",
-        answered && !isCorrect && "border-destructive/30",
-        !answered && !locked && "border-border",
+        shellClass,
       )}
     >
-      <div className="flex items-start gap-3">
-        <span
-          className={cn(
-            "flex size-8 shrink-0 items-center justify-center rounded-lg border caption font-semibold tabular-nums",
-            locked
-              ? "border-success/30 bg-success/10 text-success"
-              : "border-brand/30 bg-brand/10 text-brand-text",
-          )}
-          aria-hidden
-        >
-          {index + 1}
-        </span>
-        <div className="min-w-0 flex-1">
-          {total > 1 ? (
-            <p className="caption font-medium text-muted-foreground">
-              Question {index + 1} of {total}
-            </p>
-          ) : null}
-          <p
-            id={questionId}
-            className={cn(
-              "font-medium text-foreground",
-              total > 1 && "mt-1",
-            )}
-          >
-            {question.question}
-          </p>
-        </div>
-      </div>
-
-      <div
-        role="radiogroup"
-        aria-labelledby={questionId}
-        aria-describedby={answered ? feedbackId : undefined}
-        aria-disabled={locked || undefined}
-        className="mt-4 flex flex-col gap-2.5"
-        onKeyDown={handleRadiogroupKeyDown}
-      >
-        {question.options.map((option, optionIndex) => {
-          const isSelected = selectedId === option.id;
-          const isAnswer = option.id === question.correctOptionId;
-          const state = optionState({ answered, isSelected, isAnswer });
-
-          return (
-            <button
-              key={option.id}
-              ref={(node) => {
-                optionRefs.current[optionIndex] = node;
-              }}
-              type="button"
-              role="radio"
-              tabIndex={locked ? -1 : focusIndex === optionIndex ? 0 : -1}
-              aria-checked={isSelected}
-              disabled={locked}
-              onClick={() => {
-                onSelect(option.id);
-                setFocusIndex(optionIndex);
-              }}
-              onFocus={() => setFocusIndex(optionIndex)}
-              className={quizOptionVariants({ state })}
-            >
-              <span
-                className={cn(
-                  "flex size-7 shrink-0 items-center justify-center rounded-lg border caption font-semibold uppercase transition-colors",
-                  state === "correct" &&
-                    "border-success/40 bg-success/15 text-success",
-                  state === "incorrect" &&
-                    "border-destructive/40 bg-destructive/15 text-destructive",
-                  state === "idle" &&
-                    "border-border bg-surface-raised text-muted-foreground group-hover/answer:border-brand/40 group-hover/answer:text-brand-text",
-                )}
-                aria-hidden
-              >
-                {option.id}
-              </span>
-              <span className="min-w-0 flex-1">{option.text}</span>
-              {state === "correct" ? (
-                <CheckIcon className="size-5 shrink-0 text-success" aria-hidden />
-              ) : null}
-              {state === "incorrect" ? (
-                <XIcon
-                  className="size-5 shrink-0 text-destructive"
-                  aria-hidden
-                />
-              ) : null}
-              {answered && isAnswer ? (
-                <span className="sr-only"> Correct answer</span>
-              ) : null}
-            </button>
-          );
-        })}
-      </div>
-
-      <div
-        id={feedbackId}
-        role="status"
-        aria-live="polite"
-        className={
-          answered
-            ? quizFeedbackVariants({
-                state: isCorrect ? "correct" : "incorrect",
-              })
-            : "sr-only"
-        }
-      >
-        {answered ? (
-          isCorrect ? (
-            <CheckIcon className="mt-0.5 size-5 shrink-0" aria-hidden />
-          ) : (
-            <XIcon className="mt-0.5 size-5 shrink-0" aria-hidden />
-          )
-        ) : null}
-        <span>{feedback}</span>
-      </div>
-
+      <QuizQuestionHeader
+        index={index}
+        total={total}
+        questionId={questionId}
+        question={question.question}
+        locked={locked}
+      />
+      <QuizRadiogroup
+        questionId={questionId}
+        feedbackId={feedbackId}
+        question={question}
+        controls={controls}
+        onMoveFocus={focusOption}
+      />
+      <QuizFeedback
+        feedbackId={feedbackId}
+        answered={answered}
+        isCorrect={isCorrect}
+        feedback={feedback}
+      />
       {attempt.showRetry ? (
         <Button
           type="button"
@@ -351,6 +266,203 @@ function QuizQuestionBlock({
           Try again
         </Button>
       ) : null}
+    </div>
+  );
+}
+
+function QuizRadiogroup({
+  questionId,
+  feedbackId,
+  question,
+  controls,
+  onMoveFocus,
+}: {
+  questionId: string;
+  feedbackId: string;
+  question: QuizQuestion;
+  controls: QuizOptionControls;
+  onMoveFocus: (index: number) => void;
+}) {
+  const { answered, locked, focusIndex, onSelect } = controls;
+
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (locked) return;
+    const action = rovingKeyAction(
+      event.key,
+      focusIndex,
+      question.options.length,
+      { selectOnEnter: true },
+    );
+    if (action.type === "none") return;
+    event.preventDefault();
+    if (action.type === "move") {
+      onMoveFocus(action.index);
+      return;
+    }
+    const option = question.options[action.index];
+    if (option) onSelect(option.id);
+  }
+
+  return (
+    <div
+      role="radiogroup"
+      aria-labelledby={questionId}
+      aria-describedby={answered ? feedbackId : undefined}
+      aria-disabled={locked || undefined}
+      className="mt-4 flex flex-col gap-2.5"
+      onKeyDown={handleKeyDown}
+    >
+      {question.options.map((option, optionIndex) => (
+        <QuizOptionButton
+          key={option.id}
+          option={option}
+          optionIndex={optionIndex}
+          correctOptionId={question.correctOptionId}
+          controls={controls}
+        />
+      ))}
+    </div>
+  );
+}
+
+const OPTION_MARK = {
+  correct: "border-success/40 bg-success/15 text-success",
+  incorrect: "border-destructive/40 bg-destructive/15 text-destructive",
+  idle: "border-border bg-surface-raised text-muted-foreground group-hover/answer:border-brand/40 group-hover/answer:text-brand-text",
+} as const;
+
+function QuizQuestionHeader({
+  index,
+  total,
+  questionId,
+  question,
+  locked,
+}: {
+  index: number;
+  total: number;
+  questionId: string;
+  question: string;
+  locked: boolean;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <span
+        className={cn(
+          "flex size-8 shrink-0 items-center justify-center rounded-lg border caption font-semibold tabular-nums",
+          locked
+            ? "border-success/30 bg-success/10 text-success"
+            : "border-brand/30 bg-brand/10 text-brand-text",
+        )}
+        aria-hidden
+      >
+        {index + 1}
+      </span>
+      <div className="min-w-0 flex-1">
+        {total > 1 ? (
+          <p className="caption font-medium text-muted-foreground">
+            Question {index + 1} of {total}
+          </p>
+        ) : null}
+        <p
+          id={questionId}
+          className={cn("font-medium text-foreground", total > 1 && "mt-1")}
+        >
+          {question}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function QuizOptionButton({
+  option,
+  optionIndex,
+  correctOptionId,
+  controls,
+}: {
+  option: QuizQuestion["options"][number];
+  optionIndex: number;
+  correctOptionId: string;
+  controls: QuizOptionControls;
+}) {
+  const { selectedId, answered, locked, focusIndex, optionRefs, onSelect, onFocusIndex } =
+    controls;
+  const isSelected = selectedId === option.id;
+  const isAnswer = option.id === correctOptionId;
+  const state = optionState({ answered, isSelected, isAnswer });
+
+  return (
+    <button
+      ref={(node) => {
+        optionRefs.current[optionIndex] = node;
+      }}
+      type="button"
+      role="radio"
+      tabIndex={locked ? -1 : focusIndex === optionIndex ? 0 : -1}
+      aria-checked={isSelected}
+      disabled={locked}
+      onClick={() => {
+        onSelect(option.id);
+        onFocusIndex(optionIndex);
+      }}
+      onFocus={() => onFocusIndex(optionIndex)}
+      className={quizOptionVariants({ state })}
+    >
+      <span
+        className={cn(
+          "flex size-7 shrink-0 items-center justify-center rounded-lg border caption font-semibold uppercase transition-colors",
+          OPTION_MARK[state],
+        )}
+        aria-hidden
+      >
+        {option.id}
+      </span>
+      <span className="min-w-0 flex-1">{option.text}</span>
+      {state === "correct" ? (
+        <CheckIcon className="size-5 shrink-0 text-success" aria-hidden />
+      ) : null}
+      {state === "incorrect" ? (
+        <XIcon className="size-5 shrink-0 text-destructive" aria-hidden />
+      ) : null}
+      {answered && isAnswer ? (
+        <span className="sr-only"> Correct answer</span>
+      ) : null}
+    </button>
+  );
+}
+
+function QuizFeedback({
+  feedbackId,
+  answered,
+  isCorrect,
+  feedback,
+}: {
+  feedbackId: string;
+  answered: boolean;
+  isCorrect: boolean;
+  feedback: string;
+}) {
+  return (
+    <div
+      id={feedbackId}
+      role="status"
+      aria-live="polite"
+      className={
+        answered
+          ? quizFeedbackVariants({
+              state: isCorrect ? "correct" : "incorrect",
+            })
+          : "sr-only"
+      }
+    >
+      {answered ? (
+        isCorrect ? (
+          <CheckIcon className="mt-0.5 size-5 shrink-0" aria-hidden />
+        ) : (
+          <XIcon className="mt-0.5 size-5 shrink-0" aria-hidden />
+        )
+      ) : null}
+      <span>{feedback}</span>
     </div>
   );
 }

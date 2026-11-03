@@ -11,4 +11,3 @@ export type ConsensusMethod = ConsensusCompareBlock["proofOfWork"];
 export type ConsensusMiners = NonNullable<ConsensusMethod["miners"]>;
 export type ConsensusResult = ConsensusMethod["result"];
 export type ConsensusFooter = NonNullable<ConsensusMethod["footer"]>;
-export type ConsensusValidators = NonNullable<ConsensusMethod["validators"]>;

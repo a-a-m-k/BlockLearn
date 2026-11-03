@@ -2,7 +2,7 @@ import { amountFieldChromeClass } from "@/components/mobile-editable-numeric";
 import { AMOUNT_DIGITS } from "@/components/ledger/types";
 import { cn } from "@/lib/utils";
 
-export function amountSlotWidthClass(compact: boolean) {
+function amountSlotWidthClass(compact: boolean) {
   return compact ? "min-w-8 sm:min-w-12 md:min-w-14" : "min-w-16";
 }
 

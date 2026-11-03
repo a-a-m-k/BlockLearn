@@ -13,15 +13,6 @@ export const siteConfig = {
   locale: "en_US",
 } as const;
 
-export const portfolioNote =
-  "The diagrams are the product: you change them, the rules are tested functions, and each correct quiz answer moves progress in the browser.";
-
-export const siteCredit = {
-  handle: "a-a-m-k",
-  profileUrl: "https://github.com/a-a-m-k",
-  repoUrl: "https://github.com/a-a-m-k/block-learn",
-} as const;
-
 export function absoluteUrl(path = "/") {
   const normalized = path.startsWith("/") ? path : `/${path}`;
   return `${siteConfig.url}${normalized}`;

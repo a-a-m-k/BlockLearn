@@ -29,54 +29,6 @@ function countWords(text: string) {
     .filter(Boolean).length;
 }
 
-function collectBlockText(block: ContentBlock): string[] {
-  switch (block.type) {
-    case "section":
-      return [
-        block.title ?? "",
-        ...block.blocks.flatMap(collectBlockText),
-      ];
-    case "paragraph":
-      return [block.text];
-    case "list":
-      return block.items.flatMap((item) => [item.label, item.text]);
-    case "callout":
-      return [block.title, block.text];
-    case "steps":
-      return [
-        block.title,
-        ...block.items.flatMap((item) => [item.title, item.text]),
-      ];
-    case "create-transaction":
-      return block.steps.flatMap((step) => [step.title, step.text ?? ""]);
-    case "explore-transaction":
-      return [
-        block.whyItMatters.title,
-        ...block.fields.flatMap((field) => [
-          field.label,
-          field.description,
-          field.whyItMatters,
-        ]),
-      ];
-    case "consensus-compare":
-      return collectConsensusText(block);
-    case "owe-ledger":
-    case "distributed-ledger":
-    case "hash-chain":
-    case "hash-check":
-    case "smart-contract-flow":
-    case "smart-contract-if-then":
-    case "smart-contract-vault":
-    case "smart-contract-uses":
-    case "smart-contract-builder":
-      return [];
-    default: {
-      const _exhaustive: never = block;
-      return _exhaustive;
-    }
-  }
-}
-
 function collectConsensusText(
   block: Extract<ContentBlock, { type: "consensus-compare" }>,
 ) {
@@ -98,6 +50,42 @@ function collectConsensusText(
       method.result.text,
     ]),
   ];
+}
+
+const TEXT_COLLECTORS: {
+  [K in ContentBlock["type"]]?: (
+    block: Extract<ContentBlock, { type: K }>,
+  ) => string[];
+} = {
+  section: (block) => [
+    block.title ?? "",
+    ...block.blocks.flatMap(collectBlockText),
+  ],
+  paragraph: (block) => [block.text],
+  list: (block) => block.items.flatMap((item) => [item.label, item.text]),
+  callout: (block) => [block.title, block.text],
+  steps: (block) => [
+    block.title,
+    ...block.items.flatMap((item) => [item.title, item.text]),
+  ],
+  "create-transaction": (block) =>
+    block.steps.flatMap((step) => [step.title, step.text ?? ""]),
+  "explore-transaction": (block) => [
+    block.whyItMatters.title,
+    ...block.fields.flatMap((field) => [
+      field.label,
+      field.description,
+      field.whyItMatters,
+    ]),
+  ],
+  "consensus-compare": collectConsensusText,
+};
+
+function collectBlockText(block: ContentBlock): string[] {
+  const collect = TEXT_COLLECTORS[block.type] as
+    | ((block: ContentBlock) => string[])
+    | undefined;
+  return collect ? collect(block) : [];
 }
 
 function collectQuizText(quiz: ChapterQuiz) {

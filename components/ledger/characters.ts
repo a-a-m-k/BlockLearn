@@ -8,7 +8,7 @@ export const FACE_BY_NAME = {
   Alex: "beard",
 } as const satisfies Record<string, FaceVariant>;
 
-export type CharacterName = keyof typeof FACE_BY_NAME;
+type CharacterName = keyof typeof FACE_BY_NAME;
 
 export function faceFor(name: string): FaceVariant {
   if (name in FACE_BY_NAME) {

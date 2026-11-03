@@ -1,6 +1,6 @@
 import type { ContentBlock } from "@/lib/chapter-content";
 
-export const DIAGRAM_BLOCK_TYPES = [
+const DIAGRAM_BLOCK_TYPES = [
   "owe-ledger",
   "distributed-ledger",
   "hash-chain",

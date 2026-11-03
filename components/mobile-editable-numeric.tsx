@@ -5,6 +5,8 @@ import {
   useRef,
   useState,
   type ComponentProps,
+  type CSSProperties,
+  type RefObject,
 } from "react";
 import { CheckIcon, PencilIcon, XIcon } from "lucide-react";
 
@@ -19,6 +21,11 @@ export const amountFieldChromeClass =
 const amountControlHeightClass = "h-[1.75em] max-h-[1.75em]";
 
 export type AmountEditSession = "start" | "commit" | "cancel";
+
+type AmountBounds = {
+  floor: number;
+  ceiling: number;
+};
 
 type MobileEditableNumericProps = {
   label: string;
@@ -37,6 +44,171 @@ type MobileEditableNumericProps = {
   prefixClassName?: string;
 } & Omit<ComponentProps<"input">, "value" | "onChange" | "type" | "className">;
 
+function AmountDisplay({
+  label,
+  value,
+  prefix,
+  digitStyle,
+  cueClassName,
+  shellClassName,
+  prefixClassName,
+  onEdit,
+}: {
+  label: string;
+  value: number;
+  prefix: string;
+  digitStyle: CSSProperties;
+  cueClassName?: string;
+  shellClassName?: string;
+  prefixClassName?: string;
+  onEdit: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      data-amount-field=""
+      aria-label={`Edit ${label}, ${prefix}${value}`}
+      onClick={onEdit}
+      className={cn(
+        amountControlHeightClass,
+        "group inline-flex w-fit shrink-0 cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0 font-semibold leading-none text-foreground tabular-nums",
+        "focus-visible:outline-none",
+        cueClassName,
+        shellClassName,
+      )}
+    >
+      <span
+        data-amount-pill=""
+        className="inline-flex h-full min-h-0 items-center gap-1 rounded-md border border-border bg-card px-2 shadow-card transition-all group-hover:border-brand group-hover:bg-brand/10 group-focus-visible:border-brand group-focus-visible:ring-2 group-focus-visible:ring-brand/40"
+      >
+        {prefix ? (
+          <span className={cn("select-none", prefixClassName)} aria-hidden>
+            {prefix}
+          </span>
+        ) : null}
+        <span className="text-right" style={digitStyle}>
+          {value}
+        </span>
+      </span>
+      <PencilIcon
+        className="size-[1.15em] shrink-0 text-muted-foreground transition-colors group-hover:text-brand-text"
+        aria-hidden
+      />
+    </button>
+  );
+}
+
+function AmountEditor({
+  label,
+  draft,
+  digitStyle,
+  shellClassName,
+  inputClassName,
+  inputRef,
+  inputProps,
+  bounds,
+  onDraftChange,
+  onBlur,
+  onSave,
+  onCancel,
+}: {
+  label: string;
+  draft: string;
+  digitStyle: CSSProperties;
+  shellClassName?: string;
+  inputClassName?: string;
+  inputRef: RefObject<HTMLInputElement | null>;
+  inputProps: Omit<
+    ComponentProps<"input">,
+    "value" | "onChange" | "type" | "className"
+  >;
+  bounds: AmountBounds;
+  onDraftChange: (draft: string) => void;
+  onBlur: () => void;
+  onSave: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div
+      data-amount-field=""
+      className={cn(
+        amountControlHeightClass,
+        "inline-flex min-h-0 shrink-0 items-center gap-2",
+      )}
+    >
+      <label
+        className={cn(
+          "inline-flex h-full min-h-0 items-center rounded-md border border-brand bg-card px-2 leading-none shadow-brand ring-2 ring-brand/15",
+          shellClassName,
+        )}
+      >
+        <span className="sr-only">{label}</span>
+        <input
+          ref={inputRef}
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          value={draft}
+          aria-label={label}
+          onChange={(event) => {
+            const result = validateNumericDraft(
+              event.target.value,
+              bounds.floor,
+              bounds.ceiling,
+              draft,
+            );
+            if (!result.ok) {
+              event.target.value = draft;
+              return;
+            }
+            onDraftChange(result.draft);
+          }}
+          onBlur={onBlur}
+          onKeyDown={(event) => {
+            if (event.key === "-" || event.key === "Minus") {
+              event.preventDefault();
+              return;
+            }
+            if (event.key === "Enter") {
+              event.preventDefault();
+              onSave();
+            }
+            if (event.key === "Escape") {
+              event.preventDefault();
+              onCancel();
+            }
+          }}
+          className={cn(
+            "m-0 h-full min-h-0 shrink-0 border-0 bg-transparent p-0 text-right text-inherit leading-none outline-none",
+            "tabular-nums max-md:text-base focus-visible:ring-0",
+            inputClassName,
+          )}
+          {...inputProps}
+          style={digitStyle}
+        />
+      </label>
+      <button
+        type="button"
+        aria-label="Save amount"
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={onSave}
+        className="grid aspect-square h-full min-h-0 shrink-0 place-items-center rounded-md border border-brand bg-brand text-brand-foreground shadow-card transition-colors hover:bg-brand/80 focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:outline-none"
+      >
+        <CheckIcon className="size-[1em]" aria-hidden />
+      </button>
+      <button
+        type="button"
+        aria-label="Cancel amount edit"
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={onCancel}
+        className="grid aspect-square h-full min-h-0 shrink-0 place-items-center rounded-md border border-border bg-card text-muted-foreground shadow-card transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none"
+      >
+        <XIcon className="size-[1em]" aria-hidden />
+      </button>
+    </div>
+  );
+}
+
 export function MobileEditableNumeric({
   label,
   value,
@@ -53,12 +225,15 @@ export function MobileEditableNumeric({
   ...inputProps
 }: MobileEditableNumericProps) {
   const floor = Math.max(0, min);
-  const ceiling = Math.max(floor, max);
+  const bounds: AmountBounds = {
+    floor,
+    ceiling: Math.max(floor, max),
+  };
   const [draft, setDraft] = useState(String(value));
   const [editing, setEditing] = useState(false);
   const skipBlur = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const maxDigits = String(Math.max(0, Math.floor(ceiling))).length;
+  const maxDigits = String(Math.max(0, Math.floor(bounds.ceiling))).length;
   const columnDigits = Math.max(maxDigits, digits ?? maxDigits);
   const digitStyle = { width: `${columnDigits}ch` };
 
@@ -75,7 +250,7 @@ export function MobileEditableNumeric({
   }, [editing]);
 
   function commitDraft() {
-    const result = validateNumericDraft(draft, floor, ceiling);
+    const result = validateNumericDraft(draft, bounds.floor, bounds.ceiling);
     if (!result.ok || result.value === null) {
       setDraft(String(value));
       return false;
@@ -102,133 +277,47 @@ export function MobileEditableNumeric({
     closeEdit("cancel");
   }
 
-  function startEdit() {
-    setDraft(String(value));
-    setEditing(true);
-    onEditSession?.("start");
-  }
-
   if (!editing) {
     return (
-      <button
-        type="button"
-        data-amount-field=""
-        aria-label={`Edit ${label}, ${prefix}${value}`}
-        onClick={startEdit}
-        className={cn(
-          amountControlHeightClass,
-          "group inline-flex w-fit shrink-0 cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0 font-semibold leading-none text-foreground tabular-nums",
-          "focus-visible:outline-none",
-          cueClassName,
-          shellClassName,
-        )}
-      >
-        <span
-          data-amount-pill=""
-          className="inline-flex h-full min-h-0 items-center gap-1 rounded-md border border-border bg-card px-2 shadow-card transition-all group-hover:border-brand group-hover:bg-brand/10 group-focus-visible:border-brand group-focus-visible:ring-2 group-focus-visible:ring-brand/40"
-        >
-          {prefix ? (
-            <span className={cn("select-none", prefixClassName)} aria-hidden>
-              {prefix}
-            </span>
-          ) : null}
-          <span className="text-right" style={digitStyle}>
-            {value}
-          </span>
-        </span>
-        <PencilIcon
-          className="size-[1.15em] shrink-0 text-muted-foreground transition-colors group-hover:text-brand-text"
-          aria-hidden
-        />
-      </button>
+      <AmountDisplay
+        label={label}
+        value={value}
+        prefix={prefix}
+        digitStyle={digitStyle}
+        cueClassName={cueClassName}
+        shellClassName={shellClassName}
+        prefixClassName={prefixClassName}
+        onEdit={() => {
+          setDraft(String(value));
+          setEditing(true);
+          onEditSession?.("start");
+        }}
+      />
     );
   }
 
   return (
-    <div
-      data-amount-field=""
-      className={cn(
-        amountControlHeightClass,
-        "inline-flex min-h-0 shrink-0 items-center gap-2",
-      )}
-    >
-      <label
-        className={cn(
-          "inline-flex h-full min-h-0 items-center rounded-md border border-brand bg-card px-2 leading-none shadow-brand ring-2 ring-brand/15",
-          shellClassName,
-        )}
-      >
-        <span className="sr-only">{label}</span>
-        <input
-          ref={inputRef}
-          type="text"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          value={draft}
-          aria-label={label}
-          onChange={(event) => {
-            const result = validateNumericDraft(
-              event.target.value,
-              floor,
-              ceiling,
-              draft,
-            );
-            if (!result.ok) {
-              event.target.value = draft;
-              return;
-            }
-            setDraft(result.draft);
-          }}
-          onBlur={() => {
-            if (skipBlur.current) {
-              skipBlur.current = false;
-              return;
-            }
-            const changed = commitDraft();
-            setEditing(false);
-            onEditSession?.(changed ? "commit" : "cancel");
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "-" || event.key === "Minus") {
-              event.preventDefault();
-              return;
-            }
-            if (event.key === "Enter") {
-              event.preventDefault();
-              saveEdit();
-            }
-            if (event.key === "Escape") {
-              event.preventDefault();
-              cancelEdit();
-            }
-          }}
-          className={cn(
-            "m-0 h-full min-h-0 shrink-0 border-0 bg-transparent p-0 text-right text-inherit leading-none outline-none",
-            "tabular-nums max-md:text-base focus-visible:ring-0",
-            inputClassName,
-          )}
-          {...inputProps}
-          style={digitStyle}
-        />
-      </label>
-      <button
-        type="button"
-        aria-label="Save amount"
-        onMouseDown={(event) => event.preventDefault()}
-        onClick={saveEdit}
-        className="grid aspect-square h-full min-h-0 shrink-0 place-items-center rounded-md border border-brand bg-brand text-brand-foreground shadow-card transition-colors hover:bg-brand/80 focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:outline-none"
-      >
-        <CheckIcon className="size-[1em]" aria-hidden />
-      </button>
-      <button
-        type="button"
-        aria-label="Cancel amount edit"
-        onMouseDown={(event) => event.preventDefault()}
-        onClick={cancelEdit}
-        className="grid aspect-square h-full min-h-0 shrink-0 place-items-center rounded-md border border-border bg-card text-muted-foreground shadow-card transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none"
-      >
-        <XIcon className="size-[1em]" aria-hidden />
-      </button>
-    </div>
+    <AmountEditor
+      label={label}
+      draft={draft}
+      digitStyle={digitStyle}
+      shellClassName={shellClassName}
+      inputClassName={inputClassName}
+      inputRef={inputRef}
+      inputProps={inputProps}
+      bounds={bounds}
+      onDraftChange={setDraft}
+      onBlur={() => {
+        if (skipBlur.current) {
+          skipBlur.current = false;
+          return;
+        }
+        const changed = commitDraft();
+        setEditing(false);
+        onEditSession?.(changed ? "commit" : "cancel");
+      }}
+      onSave={saveEdit}
+      onCancel={cancelEdit}
+    />
   );
 }

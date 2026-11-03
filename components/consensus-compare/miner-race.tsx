@@ -21,7 +21,7 @@ import {
   accentText,
 } from "./compare-layout";
 import { CompareResultCard } from "./result-card";
-import { springPop } from "./motion";
+import { popMotion } from "./motion";
 import type { CompareAccent, ConsensusMiners, ConsensusResult } from "./types";
 import {
   hashWindow,
@@ -102,7 +102,7 @@ export function PowRaceVisual({
   );
 }
 
-export function MinerRace({
+function MinerRace({
   title,
   miners,
   accent,
@@ -183,121 +183,147 @@ export function MinerRace({
         )}
       >
         {miners.map((miner, index) => (
-          <div
+          <MinerColumn
             key={miner.name}
-            className="row-span-5 grid min-w-0 grid-rows-subgrid justify-items-center overflow-hidden"
-          >
-            <p
-              className={cn(
-                COMPARE_STAGE_LABEL,
-                "min-h-6 font-medium",
-                minerWon(solved, miner.solved)
-                  ? accentText(accent)
-                  : "text-foreground",
-              )}
-            >
-              {miner.name}
-            </p>
-            <div className={COMPARE_VISUAL_SLOT}>
-              <MinerFace
-                variant={faceFor(miner.name)}
-                mood={minerMood(solved, miner.solved)}
-                solved={minerWon(solved, miner.solved)}
-                accent={accent}
-              />
-            </div>
-            <p
-              className={cn(
-                COMPARE_STAGE_LABEL,
-                "min-h-6",
-                idle ? accentText(accent) : "text-muted-foreground",
-              )}
-            >
-              {minerAttemptLabel(idle, miner.trying)}
-            </p>
-            <div className="flex h-full w-full min-w-0 items-center overflow-hidden">
-              <MinerHashBadge
-                hash={hashes[index] ?? miner.hash}
-                className={cn(
-                  idle && "invisible",
-                  minerWon(solved, miner.solved)
-                    ? winClass
-                    : "border-muted-foreground/50 text-muted-foreground",
-                )}
-              >
-                <AnimatePresence>
-                  {solved ? (
-                    <motion.span
-                      key={miner.solved ? "check" : "x"}
-                      className="flex"
-                      initial={
-                        shouldReduceMotion
-                          ? { opacity: 0 }
-                          : { opacity: 0, transform: "scale(0.5)" }
-                      }
-                      animate={
-                        shouldReduceMotion
-                          ? { opacity: 1 }
-                          : { opacity: 1, transform: "scale(1)" }
-                      }
-                      exit={
-                        shouldReduceMotion
-                          ? { opacity: 0 }
-                          : { opacity: 0, transform: "scale(0.5)" }
-                      }
-                      transition={springPop}
-                    >
-                      {miner.solved ? (
-                        <CheckIcon className="size-3" aria-hidden />
-                      ) : (
-                        <XIcon className="size-3" aria-hidden />
-                      )}
-                    </motion.span>
-                  ) : null}
-                </AnimatePresence>
-              </MinerHashBadge>
-            </div>
-            <p
-              className={cn(
-                COMPARE_STAGE_LABEL,
-                "h-full",
-                minerWon(solved, miner.solved)
-                  ? accentText(accent)
-                  : "text-muted-foreground",
-              )}
-            >
-              <AnimatePresence mode="wait" initial={false}>
-                {solved ? (
-                  <motion.span
-                    key="status"
-                    className="block"
-                    initial={
-                      shouldReduceMotion
-                        ? { opacity: 0 }
-                        : { opacity: 0, transform: "translateY(4px)" }
-                    }
-                    animate={
-                      shouldReduceMotion
-                        ? { opacity: 1 }
-                        : { opacity: 1, transform: "translateY(0px)" }
-                    }
-                    exit={
-                      shouldReduceMotion
-                        ? { opacity: 0 }
-                        : { opacity: 0, transform: "translateY(-4px)" }
-                    }
-                    transition={springPop}
-                  >
-                    {miner.status}
-                  </motion.span>
-                ) : (
-                  <span className="invisible block">{miner.status}</span>
-                )}
-              </AnimatePresence>
-            </p>
-          </div>
+            miner={miner}
+            hash={hashes[index] ?? miner.hash}
+            accent={accent}
+            solved={solved}
+            idle={idle}
+            winClass={winClass}
+            reduced={shouldReduceMotion}
+          />
         ))}
       </div>
+    </div>
+  );
+}
+
+function MinerResultMark({
+  solved,
+  won,
+  reduced,
+}: {
+  solved: boolean;
+  won: boolean;
+  reduced: boolean | null;
+}) {
+  if (!solved) return null;
+
+  return (
+    <motion.span
+      key={won ? "check" : "x"}
+      className="flex"
+      {...popMotion(reduced, "scale(0.5)", "scale(1)")}
+    >
+      {won ? (
+        <CheckIcon className="size-3" aria-hidden />
+      ) : (
+        <XIcon className="size-3" aria-hidden />
+      )}
+    </motion.span>
+  );
+}
+
+function MinerStatusLine({
+  status,
+  solved,
+  won,
+  accent,
+  reduced,
+}: {
+  status: string;
+  solved: boolean;
+  won: boolean;
+  accent: CompareAccent;
+  reduced: boolean | null;
+}) {
+  return (
+    <p
+      className={cn(
+        COMPARE_STAGE_LABEL,
+        "h-full",
+        won ? accentText(accent) : "text-muted-foreground",
+      )}
+    >
+      <AnimatePresence mode="wait" initial={false}>
+        {solved ? (
+          <motion.span
+            key="status"
+            className="block"
+            {...popMotion(reduced, "translateY(4px)", "translateY(0px)")}
+          >
+            {status}
+          </motion.span>
+        ) : (
+          <span className="invisible block">{status}</span>
+        )}
+      </AnimatePresence>
+    </p>
+  );
+}
+
+function MinerColumn({
+  miner,
+  hash,
+  accent,
+  solved,
+  idle,
+  winClass,
+  reduced,
+}: {
+  miner: ConsensusMiners[number];
+  hash: string;
+  accent: CompareAccent;
+  solved: boolean;
+  idle: boolean;
+  winClass: string;
+  reduced: boolean | null;
+}) {
+  const won = minerWon(solved, miner.solved);
+  const nameClass = won ? accentText(accent) : "text-foreground";
+  const tryingClass = idle ? accentText(accent) : "text-muted-foreground";
+  const hashClass = won
+    ? winClass
+    : "border-muted-foreground/50 text-muted-foreground";
+
+  return (
+    <div className="row-span-5 grid min-w-0 grid-rows-subgrid justify-items-center overflow-hidden">
+      <p className={cn(COMPARE_STAGE_LABEL, "min-h-6 font-medium", nameClass)}>
+        {miner.name}
+      </p>
+      <div className={COMPARE_VISUAL_SLOT}>
+        <MinerFace
+          variant={faceFor(miner.name)}
+          mood={minerMood(solved, miner.solved)}
+          solved={won}
+          accent={accent}
+        />
+      </div>
+      <p className={cn(COMPARE_STAGE_LABEL, "min-h-6", tryingClass)}>
+        {minerAttemptLabel(idle, miner.trying)}
+      </p>
+      <div className="flex h-full w-full min-w-0 items-center overflow-hidden">
+        <MinerHashBadge
+          hash={hash}
+          className={cn(idle && "invisible", hashClass)}
+        >
+          <AnimatePresence>
+            <MinerResultMark
+              solved={solved}
+              won={miner.solved}
+              reduced={reduced}
+            />
+          </AnimatePresence>
+        </MinerHashBadge>
+      </div>
+      <MinerStatusLine
+        status={miner.status}
+        solved={solved}
+        won={won}
+        accent={accent}
+        reduced={reduced}
+      />
     </div>
   );
 }

@@ -12,7 +12,7 @@ import {
   accentText,
 } from "./compare-layout";
 import { MiniChain } from "./mini-chain";
-import { springPop } from "./motion";
+import { popMotion } from "./motion";
 import type { CompareAccent, ConsensusResult } from "./types";
 import { useRevealCycle } from "./reveal-cycle";
 import { WinnerIcon } from "./winner-icon";
@@ -22,39 +22,120 @@ function withWinnerName(template: string, name?: string) {
   return template.replaceAll("{name}", name);
 }
 
-export function CompareResultCard({
-  result,
-  accent,
-  pending: pendingProp,
-  cyclePending = false,
-  winnerName,
-  followName,
-}: {
+type CompareResultCardProps = {
   result: ConsensusResult;
   accent: CompareAccent;
   pending?: boolean;
   cyclePending?: boolean;
   winnerName?: string;
   followName?: string;
-}) {
+};
+
+function isPending(
+  cyclePending: boolean,
+  cycleIsPending: boolean,
+  pendingProp: boolean | undefined,
+) {
+  if (cyclePending) return cycleIsPending;
+  return Boolean(pendingProp);
+}
+
+function headlineFor(
+  pending: boolean,
+  scanningName: string | undefined,
+  headline: string,
+  winnerName?: string,
+) {
+  if (pending) return scanningName ?? "Waiting";
+  return withWinnerName(headline, winnerName);
+}
+
+function bodyTextFor(
+  pending: boolean,
+  waitingText: string | undefined,
+  text: string,
+  winnerName?: string,
+) {
+  if (pending) return waitingText ?? text;
+  return withWinnerName(text, winnerName);
+}
+
+function scanningNameFor(pending: boolean, followName?: string) {
+  if (!pending) return undefined;
+  return followName;
+}
+
+function cardFlags(
+  pending: boolean,
+  reward: string | undefined,
+  scanningName?: string,
+) {
+  return {
+    showReward: Boolean(reward) && !pending,
+    showHourglass: Boolean(pending && !scanningName),
+  };
+}
+
+function resolveCardView({
+  result,
+  pending: pendingProp,
+  cyclePending = false,
+  winnerName,
+  followName,
+  cycleIsPending,
+}: CompareResultCardProps & { cycleIsPending: boolean }) {
+  const pending = isPending(cyclePending, cycleIsPending, pendingProp);
+  const scanningName = scanningNameFor(pending, followName);
+  const displayName = scanningName ?? winnerName;
+
+  return {
+    pending,
+    displayName,
+    displayVariant: faceIfKnown(displayName),
+    headline: headlineFor(pending, scanningName, result.headline, winnerName),
+    text: bodyTextFor(pending, result.waitingText, result.text, winnerName),
+    ...cardFlags(pending, result.reward, scanningName),
+  };
+}
+
+const MARK_CLASS = "flex aspect-square h-full items-center justify-center";
+
+function RewardLine({ result }: { result: ConsensusResult }) {
+  return (
+    <>
+      <div className="w-full border-t border-muted-foreground/50" aria-hidden />
+      <p className="flex items-center gap-2 text-foreground">
+        <CoinsIcon className="size-5 shrink-0" strokeWidth={1.5} aria-hidden />
+        {result.rewardLabel ? `${result.rewardLabel} ` : null}
+        {result.reward}
+      </p>
+    </>
+  );
+}
+
+export function CompareResultCard({
+  result,
+  accent,
+  pending,
+  cyclePending = false,
+  winnerName,
+  followName,
+}: CompareResultCardProps) {
   const shouldReduceMotion = useReducedMotion();
   const cycle = useRevealCycle(cyclePending);
-  const pending = cyclePending ? cycle.pending : Boolean(pendingProp);
-  const scanningName = pending ? followName : undefined;
-  const displayName = scanningName ?? winnerName;
-  const headline = pending
-    ? (scanningName ?? "Waiting")
-    : withWinnerName(result.headline, winnerName);
-  const text = pending
-    ? (result.waitingText ?? result.text)
-    : withWinnerName(result.text, winnerName);
-  const showReward = Boolean(result.reward) && !pending;
-  const showHourglass = pending && !scanningName;
-  const displayVariant = faceIfKnown(displayName);
+  const view = resolveCardView({
+    result,
+    accent,
+    pending,
+    cyclePending,
+    winnerName,
+    followName,
+    cycleIsPending: cycle.pending,
+  });
 
   return (
     <div className={cn(COMPARE_CARD_SHELL, "items-center")}>
-      <p className={cn("min-h-6 text-center", accentText(accent))}>{headline}</p>
+      <p className={cn("min-h-6 text-center", accentText(accent))}>{view.headline}</p>
       <div
         className={cn(
           "grid w-full flex-1 justify-items-center gap-y-1",
@@ -64,26 +145,11 @@ export function CompareResultCard({
         <div className="min-h-6" aria-hidden />
         <div className={COMPARE_VISUAL_SLOT}>
           <AnimatePresence mode="popLayout" initial={false}>
-            {showHourglass ? (
+            {view.showHourglass ? (
               <motion.span
                 key="waiting"
-                className="flex aspect-square h-full items-center justify-center"
-                initial={
-                  shouldReduceMotion
-                    ? { opacity: 0 }
-                    : { opacity: 0, transform: "scale(0.85)" }
-                }
-                animate={
-                  shouldReduceMotion
-                    ? { opacity: 1 }
-                    : { opacity: 1, transform: "scale(1)" }
-                }
-                exit={
-                  shouldReduceMotion
-                    ? { opacity: 0 }
-                    : { opacity: 0, transform: "scale(0.85)" }
-                }
-                transition={springPop}
+                className={MARK_CLASS}
+                {...popMotion(shouldReduceMotion, "scale(0.85)", "scale(1)")}
               >
                 <HourglassIcon
                   className="size-full text-muted-foreground"
@@ -93,76 +159,34 @@ export function CompareResultCard({
               </motion.span>
             ) : (
               <motion.span
-                key={displayName ?? "winner"}
-                className="flex aspect-square h-full items-center justify-center"
-                initial={
-                  shouldReduceMotion
-                    ? { opacity: 0 }
-                    : { opacity: 0, transform: "scale(0.85)" }
-                }
-                animate={
-                  shouldReduceMotion
-                    ? { opacity: 1 }
-                    : { opacity: 1, transform: "scale(1)" }
-                }
-                exit={
-                  shouldReduceMotion
-                    ? { opacity: 0 }
-                    : { opacity: 0, transform: "scale(0.85)" }
-                }
-                transition={springPop}
+                key={view.displayName ?? "winner"}
+                className={MARK_CLASS}
+                {...popMotion(shouldReduceMotion, "scale(0.85)", "scale(1)")}
               >
                 <WinnerIcon
-                  variant={displayVariant}
+                  variant={view.displayVariant}
                   accent={accent}
-                  showTrophy={!pending}
+                  showTrophy={!view.pending}
                 />
               </motion.span>
             )}
           </AnimatePresence>
         </div>
         <p className="flex min-h-6 items-center text-center text-foreground">
-          {text}
+          {view.text}
         </p>
         <div className="flex h-full items-center">
-          <MiniChain accent={accent} pending={pending} />
+          <MiniChain accent={accent} pending={view.pending} />
         </div>
         <div className="flex h-full w-full flex-col items-center justify-center">
           <AnimatePresence initial={false}>
-            {showReward ? (
+            {view.showReward ? (
               <motion.div
                 key="reward"
                 className="flex w-full flex-col items-center gap-3"
-                initial={
-                  shouldReduceMotion
-                    ? { opacity: 0 }
-                    : { opacity: 0, transform: "translateY(6px)" }
-                }
-                animate={
-                  shouldReduceMotion
-                    ? { opacity: 1 }
-                    : { opacity: 1, transform: "translateY(0px)" }
-                }
-                exit={
-                  shouldReduceMotion
-                    ? { opacity: 0 }
-                    : { opacity: 0, transform: "translateY(6px)" }
-                }
-                transition={springPop}
+                {...popMotion(shouldReduceMotion, "translateY(6px)", "translateY(0px)")}
               >
-                <div
-                  className="w-full border-t border-muted-foreground/50"
-                  aria-hidden
-                />
-                <p className="flex items-center gap-2 text-foreground">
-                  <CoinsIcon
-                    className="size-5 shrink-0"
-                    strokeWidth={1.5}
-                    aria-hidden
-                  />
-                  {result.rewardLabel ? `${result.rewardLabel} ` : null}
-                  {result.reward}
-                </p>
+                <RewardLine result={result} />
               </motion.div>
             ) : null}
           </AnimatePresence>

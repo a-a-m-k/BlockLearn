@@ -1,6 +1,7 @@
+import { MAX_AMOUNT } from "@/components/ledger/types";
+
 import {
   BROADCAST_QUEUE,
-  MAX_AMOUNT,
   type AmountEntry,
   type NetworkStatus,
 } from "./model";

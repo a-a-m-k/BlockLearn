@@ -29,9 +29,9 @@ type ScenePerson = {
 export type SceneKeeper = ScenePerson;
 export type SceneReader = ScenePerson & { position: ReaderPosition };
 
-export const ANGRY_DELTA = -1;
+const ANGRY_DELTA = -1;
 
-export const FACE_PRESETS: {
+const FACE_PRESETS: {
   variant: FaceVariant;
   position: ReaderPosition;
 }[] = [
@@ -49,7 +49,7 @@ const POSITION_VEC: Record<ReaderPosition, Vec2> = {
 
 const KEEPER_VARIANT: FaceVariant = FACE_BY_NAME.Bob;
 
-export function moodFromDelta(delta: number): FaceMood {
+function moodFromDelta(delta: number): FaceMood {
   if (delta > 0) return "happy";
   if (delta <= ANGRY_DELTA) return "angry";
   if (delta < 0) return "disappointed";

@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { DM_Sans, Space_Mono } from "next/font/google";
 import { cn } from "@/lib/utils";
-import { FigmaMakeNavigation } from "@/components/figma-make-navigation";
+import { FullPageLinkNavigation } from "@/components/full-page-link-navigation";
 import { ProgressProvider } from "@/components/progress-provider";
 import { siteConfig, siteOgImage } from "@/lib/site";
 
@@ -59,7 +59,7 @@ export default function RootLayout({
         >
           Skip to content
         </a>
-        <FigmaMakeNavigation />
+        <FullPageLinkNavigation />
         <ProgressProvider>{children}</ProgressProvider>
       </body>
     </html>

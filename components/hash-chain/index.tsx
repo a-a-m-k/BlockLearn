@@ -4,12 +4,12 @@ import { Fragment } from "react";
 
 import { FlowArrow } from "@/components/flow-arrow";
 import { formatAmount } from "@/components/ledger/amounts";
+import { FACE_BY_NAME } from "@/components/ledger/characters";
 import { cn } from "@/lib/utils";
 
 import {
   CHAIN,
   CURRENT_BLOCK,
-  FACE_BY_NAME,
   TRANSACTIONS,
   blockLabel,
 } from "./model";

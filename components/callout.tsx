@@ -26,7 +26,7 @@ const TONE = {
   },
 } as const;
 
-export type CalloutTone = keyof typeof TONE;
+type CalloutTone = keyof typeof TONE;
 
 type CalloutProps = {
   tone?: CalloutTone;

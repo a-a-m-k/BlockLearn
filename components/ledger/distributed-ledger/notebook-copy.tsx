@@ -7,7 +7,6 @@ import {
   NotebookHeading,
   NotebookTotal,
 } from "@/components/ledger/notebook-frame";
-import type { NotebookTone } from "@/components/ledger/notebook";
 import type {
   FaceGaze,
   FaceMood,
@@ -20,7 +19,9 @@ import {
 } from "@/components/ledger/person-face";
 import { cn } from "@/lib/utils";
 
-import { MAX_AMOUNT, type AmountEntry } from "./model";
+import { MAX_AMOUNT, type AmountEntry } from "@/components/ledger/types";
+
+type NotebookTone = "default" | "brand" | "destructive";
 
 type NotebookCopyProps = {
   name: string;

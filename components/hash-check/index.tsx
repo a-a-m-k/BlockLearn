@@ -17,6 +17,7 @@ import {
   useAmountGuide,
 } from "@/components/ledger/amount-guide";
 import { LedgerEntryRow } from "@/components/ledger/ledger-entry-row";
+import { MAX_AMOUNT } from "@/components/ledger/types";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -24,10 +25,152 @@ import {
   BLOCK_NUMBER,
   EXPECTED_HASH,
   INITIAL_TXS,
-  MAX_AMOUNT,
   hashBlock,
   type BlockTx,
 } from "./model";
+
+function HashMatchStatus({
+  isValid,
+  lines,
+}: {
+  isValid: boolean;
+  lines: readonly [string, string];
+}) {
+  return (
+    <div className="flex items-center justify-center gap-3">
+      <span
+        className={cn(
+          "flex size-8 shrink-0 items-center justify-center rounded-full border",
+          isValid
+            ? "border-brand text-brand-text"
+            : "border-destructive bg-destructive text-destructive-foreground",
+        )}
+        aria-hidden
+      >
+        {isValid ? (
+          <CheckIcon className="size-icon" />
+        ) : (
+          <XIcon className="size-icon" />
+        )}
+      </span>
+      <p role="status" aria-live="polite" className="text-body text-foreground">
+        {lines[0]}
+        <br />
+        {lines[1]}
+      </p>
+    </div>
+  );
+}
+
+function HashEditorPanel({
+  txs,
+  isChanged,
+  guide,
+  onAmountChange,
+  onReset,
+}: {
+  txs: BlockTx[];
+  isChanged: boolean;
+  guide: ReturnType<typeof useAmountGuide>;
+  onAmountChange: (index: number, amount: number) => void;
+  onReset: () => void;
+}) {
+  return (
+    <div className="diagram-panel diagram-pad w-full min-w-0 xl:w-80 xl:shrink-0">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex min-w-0 items-center gap-2">
+          <span
+            className={cn(
+              "flex size-7 shrink-0 items-center justify-center rounded-full sm:size-6",
+              isChanged
+                ? "bg-destructive text-destructive-foreground"
+                : "border border-brand text-brand-text",
+            )}
+          >
+            {isChanged ? (
+              <AlertCircleIcon className="size-icon-sm" aria-hidden />
+            ) : (
+              <InfoIcon className="size-icon-sm" aria-hidden />
+            )}
+          </span>
+          <h3 className="text-body font-semibold text-foreground">
+            Change one thing, change the hash
+          </h3>
+        </div>
+        {isChanged ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            icon={RefreshCwIcon}
+            className="w-full shrink-0 sm:w-auto"
+            onClick={onReset}
+          >
+            Reset
+          </Button>
+        ) : null}
+      </div>
+
+      <div className="relative mt-5">
+        <div className="mb-2">
+          <p
+            className={cn(
+              "font-semibold",
+              isChanged ? "text-destructive" : "text-brand-text",
+            )}
+          >
+            Block {blockLabel(BLOCK_NUMBER)}
+          </p>
+          {isChanged ? (
+            <p className="caption text-destructive">(changed)</p>
+          ) : (
+            <p className="caption text-muted-foreground">
+              Edit an amount to break the hash.
+            </p>
+          )}
+        </div>
+        <ul>
+          {txs.map((tx, index) => {
+            const original = INITIAL_TXS[index]?.amount;
+            const changed = original !== undefined && tx.amount !== original;
+            return (
+              <LedgerEntryRow
+                key={`${tx.from}-${tx.to}`}
+                from={tx.from}
+                to={tx.to}
+                amount={tx.amount}
+                maxAmount={MAX_AMOUNT}
+                isLast={index === txs.length - 1}
+                amountTone={changed ? "destructive" : "default"}
+                edited={changed}
+                editable
+                compact
+                cueClassName={
+                  index === 0 && guide.phase === "hint"
+                    ? "[&_[data-amount-pill]]:border-brand [&_[data-amount-pill]]:bg-brand/15 [&_[data-amount-pill]]:ring-2 [&_[data-amount-pill]]:ring-brand/30 [&_svg]:text-brand-text"
+                    : undefined
+                }
+                onEditSession={guide.onEditSession}
+                onAmountChange={(amount) => onAmountChange(index, amount)}
+              />
+            );
+          })}
+          <li
+            className="px-1.5 py-1 caption text-muted-foreground sm:px-2"
+            aria-hidden
+          >
+            …
+          </li>
+        </ul>
+        <TransactionHintBanner
+          phase={guide.phase}
+          compact
+          className="mt-3 w-full"
+        />
+      </div>
+    </div>
+  );
+}
 
 export function HashCheckBlock() {
   const [txs, setTxs] = useState<BlockTx[]>(() =>
@@ -42,115 +185,25 @@ export function HashCheckBlock() {
     ? (["Hash matches.", "Block is valid."] as const)
     : (["Hash doesn't match.", "Block is invalid."] as const);
 
-  function setAmount(index: number, amount: number) {
-    setTxs((prev) =>
-      prev.map((tx, i) => (i === index ? { ...tx, amount } : tx)),
-    );
-  }
-
-  function resetBlock() {
-    setTxs(INITIAL_TXS.map((tx) => ({ ...tx })));
-    guide.reset();
-  }
-
   return (
     <figure
       className="flex w-full min-w-0 flex-col gap-4 text-foreground xl:flex-row xl:items-stretch"
       aria-label="Change a transaction in a block and watch its hash stop matching what the next block expects."
     >
-      <div className="diagram-panel diagram-pad w-full min-w-0 xl:w-80 xl:shrink-0">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex min-w-0 items-center gap-2">
-            <span
-              className={cn(
-                "flex size-7 shrink-0 items-center justify-center rounded-full sm:size-6",
-                isChanged
-                  ? "bg-destructive text-destructive-foreground"
-                  : "border border-brand text-brand-text",
-              )}
-            >
-              {isChanged ? (
-                <AlertCircleIcon className="size-icon-sm" aria-hidden />
-              ) : (
-                <InfoIcon className="size-icon-sm" aria-hidden />
-              )}
-            </span>
-            <h3 className="text-body font-semibold text-foreground">
-              Change one thing, change the hash
-            </h3>
-          </div>
-          {isChanged ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              icon={RefreshCwIcon}
-              className="w-full shrink-0 sm:w-auto"
-              onClick={resetBlock}
-            >
-              Reset
-            </Button>
-          ) : null}
-        </div>
-
-        <div className="relative mt-5">
-          <div className="mb-2">
-            <p
-              className={cn(
-                "font-semibold",
-                isChanged ? "text-destructive" : "text-brand-text",
-              )}
-            >
-              Block {blockLabel(BLOCK_NUMBER)}
-            </p>
-            {isChanged ? (
-              <p className="caption text-destructive">(changed)</p>
-            ) : (
-              <p className="caption text-muted-foreground">
-                Edit an amount to break the hash.
-              </p>
-            )}
-          </div>
-          <ul>
-            {txs.map((tx, index) => {
-              const original = INITIAL_TXS[index]?.amount;
-              const changed = original !== undefined && tx.amount !== original;
-              return (
-                <LedgerEntryRow
-                  key={`${tx.from}-${tx.to}`}
-                  from={tx.from}
-                  to={tx.to}
-                  amount={tx.amount}
-                  maxAmount={MAX_AMOUNT}
-                  isLast={index === txs.length - 1}
-                  amountTone={changed ? "destructive" : "default"}
-                  edited={changed}
-                  editable
-                  compact
-                  cueClassName={
-                    index === 0 && guide.phase === "hint"
-                      ? "[&_[data-amount-pill]]:border-brand [&_[data-amount-pill]]:bg-brand/15 [&_[data-amount-pill]]:ring-2 [&_[data-amount-pill]]:ring-brand/30 [&_svg]:text-brand-text"
-                      : undefined
-                  }
-                  onEditSession={guide.onEditSession}
-                  onAmountChange={(amount) => setAmount(index, amount)}
-                />
-              );
-            })}
-            <li
-              className="px-1.5 py-1 caption text-muted-foreground sm:px-2"
-              aria-hidden
-            >
-              …
-            </li>
-          </ul>
-          <TransactionHintBanner
-            phase={guide.phase}
-            compact
-            className="mt-3 w-full"
-          />
-        </div>
-      </div>
+      <HashEditorPanel
+        txs={txs}
+        isChanged={isChanged}
+        guide={guide}
+        onAmountChange={(index, amount) => {
+          setTxs((prev) =>
+            prev.map((tx, i) => (i === index ? { ...tx, amount } : tx)),
+          );
+        }}
+        onReset={() => {
+          setTxs(INITIAL_TXS.map((tx) => ({ ...tx })));
+          guide.reset();
+        }}
+      />
 
       <FlowArrow at="xl" downClassName="mx-auto" />
 
@@ -179,32 +232,7 @@ export function HashCheckBlock() {
           result. Change it, and the result changes.
         </p>
 
-        <div className="flex items-center justify-center gap-3">
-          <span
-            className={cn(
-              "flex size-8 shrink-0 items-center justify-center rounded-full border",
-              isValid
-                ? "border-brand text-brand-text"
-                : "border-destructive bg-destructive text-destructive-foreground",
-            )}
-            aria-hidden
-          >
-            {isValid ? (
-              <CheckIcon className="size-icon" />
-            ) : (
-              <XIcon className="size-icon" />
-            )}
-          </span>
-          <p
-            role="status"
-            aria-live="polite"
-            className="text-body text-foreground"
-          >
-            {statusLines[0]}
-            <br />
-            {statusLines[1]}
-          </p>
-        </div>
+        <HashMatchStatus isValid={isValid} lines={statusLines} />
       </div>
     </figure>
   );

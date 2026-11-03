@@ -170,7 +170,6 @@ export {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogPortal,
   AlertDialogTitle,
   AlertDialogTrigger,
 };

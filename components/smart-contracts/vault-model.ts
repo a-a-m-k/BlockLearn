@@ -1,6 +1,6 @@
 export type VaultState = "locked" | "denied" | "ready" | "unlocked";
 
-export type VaultTone = "muted" | "danger" | "brand" | "plain";
+type VaultTone = "muted" | "danger" | "brand" | "plain";
 
 const MESSAGES: Record<VaultState, { tone: VaultTone; text: string }> = {
   locked: {

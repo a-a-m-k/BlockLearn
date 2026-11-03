@@ -36,62 +36,71 @@ export function CourseSyllabus() {
       </div>
 
       <ol className={styles.chapterGrid}>
-        {chapters.map((chapter) => {
-          const completed = hydrated && isComplete(chapter.slug);
-          const upNext =
-            hydrated && !courseFinished && chapter.slug === resumeSlug;
-          return (
-            <li key={chapter.slug}>
-              <Link
-                href={chapterPath(chapter.slug)}
-                aria-current={upNext ? "step" : undefined}
-                className={cn(
-                  styles.chapterCard,
-                  upNext && styles.current,
-                )}
-              >
-                <div className={styles.chapterTop}>
-                  <span>{String(chapter.number).padStart(2, "0")}</span>
-                  {upNext ? <i>IN PROGRESS</i> : null}
-                </div>
-
-                <div className={styles.chapterArt} aria-hidden>
-                  {chapter.image ? (
-                    <Image
-                      src={chapter.image.src}
-                      alt=""
-                      width={380}
-                      height={380}
-                      sizes="6rem"
-                    />
-                  ) : null}
-                  {completed ? <CheckIcon /> : null}
-                </div>
-
-                <div className={styles.chapterCopy}>
-                  <h3>
-                    {completed ? (
-                      <span className="sr-only">Completed. </span>
-                    ) : null}
-                    {chapter.title}
-                  </h3>
-                  <p>{chapter.description}</p>
-                </div>
-
-                <div className={styles.chapterFooter}>
-                  <span>
-                    <ClockIcon aria-hidden />
-                    {chapter.readMinutes} min
-                  </span>
-                  <i>
-                    <ArrowRightIcon aria-hidden />
-                  </i>
-                </div>
-              </Link>
-            </li>
-          );
-        })}
+        {chapters.map((chapter) => (
+          <SyllabusChapterCard
+            key={chapter.slug}
+            chapter={chapter}
+            completed={hydrated && isComplete(chapter.slug)}
+            upNext={hydrated && !courseFinished && chapter.slug === resumeSlug}
+          />
+        ))}
       </ol>
     </nav>
+  );
+}
+
+function SyllabusChapterCard({
+  chapter,
+  completed,
+  upNext,
+}: {
+  chapter: (typeof chapters)[number];
+  completed: boolean;
+  upNext: boolean;
+}) {
+  return (
+    <li>
+      <Link
+        href={chapterPath(chapter.slug)}
+        aria-current={upNext ? "step" : undefined}
+        className={cn(styles.chapterCard, upNext && styles.current)}
+      >
+        <div className={styles.chapterTop}>
+          <span>{String(chapter.number).padStart(2, "0")}</span>
+          {upNext ? <i>IN PROGRESS</i> : null}
+        </div>
+
+        <div className={styles.chapterArt} aria-hidden>
+          {chapter.image ? (
+            <Image
+              src={chapter.image.src}
+              alt=""
+              width={380}
+              height={380}
+              sizes="6rem"
+            />
+          ) : null}
+          {completed ? <CheckIcon /> : null}
+        </div>
+
+        <div className={styles.chapterCopy}>
+          <h3>
+            {completed ? <span className="sr-only">Completed. </span> : null}
+            {chapter.title}
+          </h3>
+          <p>{chapter.description}</p>
+        </div>
+
+        <div className={styles.chapterFooter}>
+          <span>
+            <ClockIcon aria-hidden />
+            {chapter.readMinutes} min
+          </span>
+          <i>
+            <ArrowRightIcon aria-hidden />
+          </i>
+        </div>
+      </Link>
+    </li>
   );
 }
