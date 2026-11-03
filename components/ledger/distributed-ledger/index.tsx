@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useState, type ReactNode } from "react";
+import { useSyncExternalStore, type ReactNode } from "react";
 import { RadioIcon, TriangleAlertIcon } from "lucide-react";
 
 import { Callout } from "@/components/callout";
@@ -18,26 +18,32 @@ import {
 import { NetworkStage } from "./network-stage";
 import { NotebookCopy } from "./notebook-copy";
 import { ScreenCenter } from "./screen-center";
-import { CenterSyncAnimation } from "./sync-animation";
+import {
+  CenterSyncAnimation,
+  SyncHubVisual,
+  SyncLifecycle,
+} from "./sync-animation";
 import { useDistributedLedger } from "./use-distributed-ledger";
 
 type DistributedLedgerBlockProps = {
   block: Extract<ContentBlock, { type: "distributed-ledger" }>;
 };
 
+const STACKED_QUERY = "(max-width: 767px)";
+
+function subscribeStacked(onChange: () => void) {
+  const media = window.matchMedia(STACKED_QUERY);
+  media.addEventListener("change", onChange);
+  return () => media.removeEventListener("change", onChange);
+}
+
 /** True while notebooks are stacked. Desktop network starts at md. */
 function useStackedCopies() {
-  const [stacked, setStacked] = useState(false);
-
-  useLayoutEffect(() => {
-    const media = window.matchMedia("(max-width: 767px)");
-    const onChange = () => setStacked(media.matches);
-    onChange();
-    media.addEventListener("change", onChange);
-    return () => media.removeEventListener("change", onChange);
-  }, []);
-
-  return stacked;
+  return useSyncExternalStore(
+    subscribeStacked,
+    () => window.matchMedia(STACKED_QUERY).matches,
+    () => false,
+  );
 }
 
 export function DistributedLedgerBlock({ block }: DistributedLedgerBlockProps) {
@@ -60,16 +66,29 @@ export function DistributedLedgerBlock({ block }: DistributedLedgerBlockProps) {
       <BroadcastCallout stacked={stacked} />
     ) : null;
 
+  const onSyncComplete = () => void finishBroadcast();
+
   return (
     <section className="overflow-hidden rounded-2xl border border-border bg-surface-raised shadow-card">
       <NetworkStage
         status={status}
+        hub={
+          status === "broadcasting" && !stacked ? (
+            <SyncLifecycle
+              key="sync-hub"
+              onComplete={onSyncComplete}
+              className="size-full"
+            >
+              <SyncHubVisual />
+            </SyncLifecycle>
+          ) : undefined
+        }
         overlay={
           <StageOverlay
             status={status}
             stacked={stacked}
             broadcastCallout={broadcastCallout}
-            onSyncComplete={() => void finishBroadcast()}
+            onSyncComplete={onSyncComplete}
           />
         }
       >
@@ -145,11 +164,11 @@ function StageOverlay({
 }) {
   return (
     <>
-      {status === "broadcasting" ? (
+      {status === "broadcasting" && stacked ? (
         <CenterSyncAnimation
           key="sync"
           onComplete={onSyncComplete}
-          detail={stacked ? broadcastCallout : null}
+          detail={broadcastCallout}
         />
       ) : null}
       {status === "mismatch" ? (

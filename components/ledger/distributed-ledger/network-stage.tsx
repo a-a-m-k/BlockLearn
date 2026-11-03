@@ -40,6 +40,8 @@ type NetworkStageProps = {
   status: NetworkStatus;
   children: ReactNode;
   overlay?: ReactNode;
+  /** Replaces the NetworkIcon when the desktop hub is visible (md+). */
+  hub?: ReactNode;
 };
 
 const DASH_Y =
@@ -193,7 +195,12 @@ function useNetworkLines() {
   return { ref, lines, size };
 }
 
-export function NetworkStage({ status, children, overlay }: NetworkStageProps) {
+export function NetworkStage({
+  status,
+  children,
+  overlay,
+  hub,
+}: NetworkStageProps) {
   const copiesRef = useEqualCopyHeight();
   const network = useNetworkLines();
 
@@ -238,21 +245,20 @@ export function NetworkStage({ status, children, overlay }: NetworkStageProps) {
 
         <div
           className={cn(
-            "pointer-events-none absolute left-1/2 top-1/2 z-[1] hidden size-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border bg-card shadow-card md:flex lg:size-24",
+            "pointer-events-none absolute left-1/2 top-1/2 z-[1] hidden size-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center overflow-visible rounded-full border bg-card shadow-card md:flex lg:size-24",
             status === "mismatch" && "border-destructive text-destructive",
             status === "broadcasting" &&
               "border-brand bg-accent text-brand-text",
             status === "synced" && "border-border text-muted-foreground",
           )}
-          aria-hidden
+          aria-hidden={hub ? undefined : true}
         >
-          <span
-            className={cn(
-              "absolute inset-2 rounded-full border border-current opacity-30",
-              status === "broadcasting" && "animate-pulse",
-            )}
-          />
-          <NetworkIcon className="size-8 lg:size-10" strokeWidth={1.4} />
+          {hub ?? (
+            <>
+              <span className="absolute inset-2 rounded-full border border-current opacity-30" />
+              <NetworkIcon className="size-8 lg:size-10" strokeWidth={1.4} />
+            </>
+          )}
         </div>
 
         <div
