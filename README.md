@@ -48,12 +48,19 @@ Short chapters, diagrams you can change, and a quiz that records progress in the
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm test` | Vitest unit tests |
-| `npm run test:e2e` | Playwright: home syllabus and the interactive diagrams |
+| `npm run test:e2e` | Playwright: progress, navigation, keyboard, diagram outcomes |
 
 ## Tests
 
 - **Unit** (`npm test`) — course content shape, progress, the teaching fingerprint, and diagram rules: quiz attempts, the shared notebooks, the miner race, the stake walk, and the smart-contract steps.
-- **Browser** (`npm run test:e2e`) — home syllabus, plus click-throughs of the shared ledger, the hash check, consensus playback, signing a transaction, and the smart-contract steps.
+- **Browser** (`npm run test:e2e`) — what unit tests can't see:
+  - progress across pages: sidebar count, syllabus checkmarks, Reset, the one-time course-complete dialog, and corrupt storage
+  - chapter navigation and the 404 page
+  - keyboard quiz answers
+  - diagram outcomes, also with reduced motion on
+  - phone-width layout and the mobile sidebar (`@phone` tests run in the `mobile` project)
+
+  Tests assert where a flow ends, not animation frames.
 
 ## Project map
 

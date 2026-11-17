@@ -26,6 +26,15 @@ export default defineConfig({
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
+      grepInvert: /@phone/,
+    },
+    {
+      name: "mobile",
+      use: {
+        ...devices["Pixel 7"],
+        viewport: { width: 390, height: 844 },
+      },
+      grep: /@phone/,
     },
   ],
 });
