@@ -4,11 +4,18 @@ import type { FaceGaze, FaceMood, FaceVariant } from "@/components/ledger/person
 
 import type { NetworkStatus } from "./model";
 
-export type PersonPosition =
-  | "top-left"
-  | "top-right"
-  | "bottom-left"
-  | "bottom-right";
+export const PERSON_POSITIONS = [
+  "top-left",
+  "top-right",
+  "bottom-left",
+  "bottom-right",
+] as const;
+
+export type PersonPosition = (typeof PERSON_POSITIONS)[number];
+
+export function isPersonPosition(value: string): value is PersonPosition {
+  return (PERSON_POSITIONS as readonly string[]).includes(value);
+}
 
 export type NetworkPerson = {
   name: string;

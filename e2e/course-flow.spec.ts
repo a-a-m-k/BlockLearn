@@ -83,6 +83,23 @@ test("distributed notebooks do not overflow on a phone width", {
   expect(pageOverflows).toBe(false);
 });
 
+test("a broadcast still lands after the layout switches mid-sync", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openChapter(page, "what-is-blockchain");
+
+  const stage = page.getByRole("figure", {
+    name: /Distributed notebooks/,
+  });
+  await page.getByRole("button", { name: "Broadcast Alex → Alice $8" }).click();
+  await page.setViewportSize({ width: 390, height: 800 });
+
+  await expect(
+    stage.getByRole("listitem").filter({ hasText: "Alex → Alice" }),
+  ).toHaveCount(4, { timeout: 10_000 });
+});
+
 test("a broadcast lands on every shared copy", async ({ page }) => {
   await openChapter(page, "what-is-blockchain");
 

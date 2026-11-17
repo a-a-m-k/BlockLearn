@@ -57,7 +57,6 @@ export function DistributedLedgerBlock({ block }: DistributedLedgerBlockProps) {
     nextBroadcast,
     setAliceAmount,
     broadcastNext,
-    finishBroadcast,
   } = useDistributedLedger(block);
   const stacked = useStackedCopies();
 
@@ -66,19 +65,13 @@ export function DistributedLedgerBlock({ block }: DistributedLedgerBlockProps) {
       <BroadcastCallout stacked={stacked} />
     ) : null;
 
-  const onSyncComplete = () => void finishBroadcast();
-
   return (
     <section className="overflow-hidden rounded-2xl border border-border bg-surface-raised shadow-card">
       <NetworkStage
         status={status}
         hub={
           status === "broadcasting" && !stacked ? (
-            <SyncLifecycle
-              key="sync-hub"
-              onComplete={onSyncComplete}
-              className="size-full"
-            >
+            <SyncLifecycle key="sync-hub" className="size-full">
               <SyncHubVisual />
             </SyncLifecycle>
           ) : undefined
@@ -88,7 +81,6 @@ export function DistributedLedgerBlock({ block }: DistributedLedgerBlockProps) {
             status={status}
             stacked={stacked}
             broadcastCallout={broadcastCallout}
-            onSyncComplete={onSyncComplete}
           />
         }
       >
@@ -155,21 +147,15 @@ function StageOverlay({
   status,
   stacked,
   broadcastCallout,
-  onSyncComplete,
 }: {
   status: NetworkStatus;
   stacked: boolean;
   broadcastCallout: ReactNode;
-  onSyncComplete: () => void;
 }) {
   return (
     <>
       {status === "broadcasting" && stacked ? (
-        <CenterSyncAnimation
-          key="sync"
-          onComplete={onSyncComplete}
-          detail={broadcastCallout}
-        />
+        <CenterSyncAnimation key="sync" detail={broadcastCallout} />
       ) : null}
       {status === "mismatch" ? (
         <div className="pointer-events-none absolute inset-0 z-20 bg-background/80">

@@ -13,28 +13,9 @@ import { NetworkIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
+import { connectorLines, copyFrameHeight, type StageBox } from "./measure";
 import type { NetworkStatus } from "./model";
-import { CONNECTIONS, type PersonPosition } from "./scene";
-
-type ConnectorLine = {
-  id: string;
-  x1: number;
-  y1: number;
-  x2: number;
-  y2: number;
-};
-
-type StagePoint = { x: number; y: number };
-
-/** Where a ray from the card center leaves that card, toward another center. */
-function borderPoint(card: DOMRect, from: StagePoint, to: StagePoint) {
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const tx = dx === 0 ? Infinity : card.width / 2 / Math.abs(dx);
-  const ty = dy === 0 ? Infinity : card.height / 2 / Math.abs(dy);
-  const t = Math.min(tx, ty);
-  return { x: from.x + dx * t, y: from.y + dy * t };
-}
+import { isPersonPosition, type PersonPosition } from "./scene";
 
 type NetworkStageProps = {
   status: NetworkStatus;
@@ -87,13 +68,25 @@ function MobilePeerJoint({
   );
 }
 
-function contentHeight(card: HTMLElement) {
-  const inner = card.firstElementChild;
-  if (!inner) return card.offsetHeight;
-  return Array.from(inner.children).reduce(
-    (sum, child) => sum + (child as HTMLElement).offsetHeight,
-    0,
-  );
+function lengthOf(value: string) {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function readCopyFrame(card: HTMLElement) {
+  const inner = card.querySelector("[data-notebook-body]");
+  const frame = inner instanceof HTMLElement ? inner : card;
+  const frameStyle = getComputedStyle(frame);
+  const cardStyle = getComputedStyle(card);
+  return copyFrameHeight({
+    childHeights: [...frame.children].flatMap((child) =>
+      child instanceof HTMLElement ? [child.offsetHeight] : [],
+    ),
+    padding: lengthOf(frameStyle.paddingTop) + lengthOf(frameStyle.paddingBottom),
+    gap: lengthOf(frameStyle.rowGap),
+    border:
+      lengthOf(cardStyle.borderTopWidth) + lengthOf(cardStyle.borderBottomWidth),
+  });
 }
 
 /** Keep every copy as tall as the tallest one, including after a new row lands. */
@@ -109,7 +102,7 @@ function useEqualCopyHeight() {
         ...root.querySelectorAll<HTMLElement>("[data-notebook-copy]"),
       ];
       if (cards.length === 0) return;
-      const max = Math.max(...cards.map(contentHeight));
+      const max = Math.max(...cards.map(readCopyFrame));
       const next = `${max}px`;
       for (const card of cards) {
         if (card.style.minHeight !== next) card.style.minHeight = next;
@@ -129,7 +122,7 @@ function useEqualCopyHeight() {
 
 function useNetworkLines() {
   const ref = useRef<HTMLDivElement>(null);
-  const [lines, setLines] = useState<ConnectorLine[]>([]);
+  const [lines, setLines] = useState<ReturnType<typeof connectorLines>>([]);
   const [size, setSize] = useState({ w: 0, h: 0 });
 
   useLayoutEffect(() => {
@@ -140,55 +133,31 @@ function useNetworkLines() {
       const bounds = stage.getBoundingClientRect();
       if (bounds.width === 0 || bounds.height === 0) return;
 
-      const cards = new Map<PersonPosition, DOMRect>();
+      const cards = new Map<PersonPosition, StageBox>();
       for (const el of stage.querySelectorAll<HTMLElement>(
         "[data-network-node]",
       )) {
-        const id = el.dataset.networkNode as PersonPosition | undefined;
-        if (!id) continue;
+        const id = el.dataset.networkNode;
+        if (!id || !isPersonPosition(id)) continue;
         const rect = el.getBoundingClientRect();
-        cards.set(
-          id,
-          new DOMRect(
-            rect.left - bounds.left,
-            rect.top - bounds.top,
-            rect.width,
-            rect.height,
-          ),
-        );
-      }
-
-      const next: ConnectorLine[] = [];
-      for (const [from, to] of CONNECTIONS) {
-        const startCard = cards.get(from);
-        const endCard = cards.get(to);
-        if (!startCard || !endCard) continue;
-        const startCenter = {
-          x: startCard.x + startCard.width / 2,
-          y: startCard.y + startCard.height / 2,
-        };
-        const endCenter = {
-          x: endCard.x + endCard.width / 2,
-          y: endCard.y + endCard.height / 2,
-        };
-        const start = borderPoint(startCard, startCenter, endCenter);
-        const end = borderPoint(endCard, endCenter, startCenter);
-        next.push({
-          id: `${from}-${to}`,
-          x1: start.x,
-          y1: start.y,
-          x2: end.x,
-          y2: end.y,
+        cards.set(id, {
+          x: rect.left - bounds.left,
+          y: rect.top - bounds.top,
+          width: rect.width,
+          height: rect.height,
         });
       }
 
       setSize({ w: bounds.width, h: bounds.height });
-      setLines(next);
+      setLines(connectorLines(cards));
     };
 
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(stage);
+    for (const card of stage.querySelectorAll("[data-network-node]")) {
+      observer.observe(card);
+    }
     return () => observer.disconnect();
   }, []);
 

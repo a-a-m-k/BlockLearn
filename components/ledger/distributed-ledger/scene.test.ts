@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { NODE, POSITION_CLASS, type PersonPosition } from "./scene";
+import {
+  isPersonPosition,
+  NODE,
+  POSITION_CLASS,
+  type PersonPosition,
+} from "./scene";
 
 const slots: Record<PersonPosition, { col: number; row: number }> = {
   "top-left": { col: 1, row: 1 },
@@ -24,5 +29,10 @@ describe("distributed ledger stage slots", () => {
     }
 
     expect(new Set(Object.values(POSITION_CLASS)).size).toBe(4);
+  });
+
+  it("accepts only the four seats the lines connect", () => {
+    expect(isPersonPosition("top-left")).toBe(true);
+    expect(isPersonPosition("center")).toBe(false);
   });
 });

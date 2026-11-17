@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState, type MutableRefObject } from "react";
 import { delay } from "motion";
+import { useReducedMotion } from "motion/react";
 
 import { entriesFromBlock } from "@/components/ledger/entries";
 import type { ContentBlock } from "@/lib/chapter-content";
 
-import { BROADCAST_QUEUE, NEW_ROW_FLASH_S, REVERT_S, WARN_S } from "./model";
+import { BROADCAST_QUEUE, REVERT_S, WARN_S } from "./model";
 import {
   aliceEntries,
   beginBroadcast,
@@ -20,6 +21,7 @@ import {
   revertCheat,
   type PendingBroadcast,
 } from "./story";
+import { broadcastSchedule } from "./timeline";
 
 type CancelRef = MutableRefObject<VoidFunction | null>;
 
@@ -36,23 +38,24 @@ function wait(seconds: number, store: CancelRef) {
 export function useDistributedLedger(
   block: Extract<ContentBlock, { type: "distributed-ledger" }>,
 ) {
+  const reducedMotion = useReducedMotion();
   const [story, setStory] = useState(() =>
     createNotebookStory(entriesFromBlock(block.entries)),
   );
 
   const cancelCheat = useRef<VoidFunction | null>(null);
+  const cancelSync = useRef<VoidFunction | null>(null);
   const cancelFlash = useRef<VoidFunction | null>(null);
   const cheatGen = useRef(0);
   const syncGen = useRef(0);
-  const pendingBroadcast = useRef<(PendingBroadcast & { gen: number }) | null>(
-    null,
-  );
 
   useEffect(() => {
     const cancelCheatFn = cancelCheat;
+    const cancelSyncFn = cancelSync;
     const cancelFlashFn = cancelFlash;
     return () => {
       cancelCheatFn.current?.();
+      cancelSyncFn.current?.();
       cancelFlashFn.current?.();
       syncGen.current += 1;
       cheatGen.current += 1;
@@ -87,22 +90,28 @@ export function useDistributedLedger(
 
     cheatGen.current += 1;
     cancelCheat.current?.();
+    cancelSync.current?.();
     cancelFlash.current?.();
 
     const gen = ++syncGen.current;
-    pendingBroadcast.current = { ...started.pending, gen };
     setStory(started.story);
+    void settleBroadcast(gen, started.pending, Boolean(reducedMotion));
   }
 
-  async function finishBroadcast() {
-    const pending = pendingBroadcast.current;
-    if (!pending || pending.gen !== syncGen.current) return;
-    pendingBroadcast.current = null;
+  async function settleBroadcast(
+    gen: number,
+    pending: PendingBroadcast,
+    reduced: boolean,
+  ) {
+    const schedule = broadcastSchedule(reduced);
+
+    await wait(schedule.commitAfter, cancelSync);
+    if (gen !== syncGen.current) return;
 
     setStory((current) => commitBroadcast(current, pending));
 
-    await wait(NEW_ROW_FLASH_S, cancelFlash);
-    if (pending.gen !== syncGen.current) return;
+    await wait(schedule.settleAfter - schedule.commitAfter, cancelFlash);
+    if (gen !== syncGen.current) return;
 
     setStory((current) => clearNewRow(current));
   }
@@ -117,6 +126,5 @@ export function useDistributedLedger(
     nextBroadcast: BROADCAST_QUEUE[story.broadcastIndex],
     setAliceAmount,
     broadcastNext,
-    finishBroadcast,
   };
 }

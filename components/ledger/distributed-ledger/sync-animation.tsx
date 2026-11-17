@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { RefreshCwIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-import { SYNC_ANIM_S } from "./model";
 import { ScreenCenter } from "./screen-center";
+import { broadcastSchedule } from "./timeline";
 
 /** Rings + spinning refresh — fills the desktop network hub (same box as NetworkIcon). */
 export function SyncHubVisual({ className }: { className?: string }) {
@@ -62,31 +62,16 @@ export function SyncHubVisual({ className }: { className?: string }) {
   );
 }
 
-/** Fade lifecycle + timed complete (infinite child spins can't own onAnimationComplete). */
+/** Fade around the spinning hub. The ledger clock commits the row, not this graphic. */
 export function SyncLifecycle({
-  onComplete,
   className,
   children,
 }: {
-  onComplete?: () => void;
   className?: string;
   children: ReactNode;
 }) {
-  const done = useRef(false);
-  const onCompleteRef = useRef(onComplete);
-  onCompleteRef.current = onComplete;
-  const reduced = useReducedMotion();
-
-  useEffect(() => {
-    done.current = false;
-    const ms = (reduced ? 0.4 : SYNC_ANIM_S) * 1000;
-    const timer = window.setTimeout(() => {
-      if (done.current) return;
-      done.current = true;
-      onCompleteRef.current?.();
-    }, ms);
-    return () => window.clearTimeout(timer);
-  }, [reduced]);
+  const reduced = Boolean(useReducedMotion());
+  const duration = broadcastSchedule(reduced).commitAfter;
 
   return (
     <motion.div
@@ -99,7 +84,7 @@ export function SyncLifecycle({
           : { opacity: [0, 1, 1, 0], scale: [0.92, 1, 1, 0.98] }
       }
       transition={{
-        duration: reduced ? 0.4 : SYNC_ANIM_S,
+        duration,
         times: [0, 0.12, 0.8, 1],
         ease: "easeInOut",
       }}
@@ -111,13 +96,7 @@ export function SyncLifecycle({
 }
 
 /** Mobile / stacked sync card — hub is hidden, so this floats in view. */
-export function CenterSyncAnimation({
-  onComplete,
-  detail,
-}: {
-  onComplete?: () => void;
-  detail?: ReactNode;
-}) {
+export function CenterSyncAnimation({ detail }: { detail?: ReactNode }) {
   return (
     <>
       <div
@@ -128,10 +107,7 @@ export function CenterSyncAnimation({
         trackViewport={Boolean(detail)}
         className={detail ? "w-[min(100%-2rem,20rem)]" : "w-max"}
       >
-        <SyncLifecycle
-          onComplete={onComplete}
-          className="flex w-full flex-col items-center gap-2"
-        >
+        <SyncLifecycle className="flex w-full flex-col items-center gap-2">
           <div className="relative size-20 overflow-visible rounded-full border border-brand bg-card shadow-card">
             <SyncHubVisual />
           </div>
