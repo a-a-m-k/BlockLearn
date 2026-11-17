@@ -74,7 +74,7 @@ export function SmartContractIfThen() {
                 key={row.code}
                 className={cn(
                   "whitespace-pre transition-colors",
-                  active ? "text-foreground" : "text-muted-foreground/50",
+                  active ? "text-foreground" : "text-muted-foreground",
                   current && "text-brand-text",
                 )}
                 animate={

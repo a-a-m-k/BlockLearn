@@ -53,6 +53,7 @@ export function FieldList({
           return (
             <li
               key={item.id}
+              role="none"
               className={cn(
                 "group flex flex-col rounded-md border transition-colors",
                 selected
